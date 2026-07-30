@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quản lý Hợp đồng Tư vấn</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">HĐ</span>
+        <div>
+          <div class="brand-title">Hợp Đồng Tư Vấn</div>
+          <div class="brand-sub">Quản lý chuyên nghiệp</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">📊 Tổng quan</button>
+        <button class="nav-item" data-view="contracts">📄 Hợp đồng</button>
+        <button class="nav-item" data-view="clients">👥 Khách hàng</button>
+        <button class="nav-item" data-view="quotes">🧾 Báo giá</button>
+        <button class="nav-item" data-view="reports">📈 Báo cáo</button>
+        <button class="nav-item" data-view="settings">⚙️ Cài đặt</button>
+      </nav>
+      <div class="sidebar-footer">Dữ liệu lưu tại trình duyệt này</div>
+    </aside>
+    <main class="content">
+      <section id="view-dashboard" class="view active"></section>
+      <section id="view-contracts" class="view"></section>
+      <section id="view-clients" class="view"></section>
+      <section id="view-quotes" class="view"></section>
+      <section id="view-reports" class="view"></section>
+      <section id="view-settings" class="view"></section>
+    </main>
+  </div>
+  <div id="modal-root"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
