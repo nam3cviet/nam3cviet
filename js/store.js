@@ -23,11 +23,11 @@ function save(key, value) {
 }
 
 const defaultSettings = {
-  companyName: "",
-  companyAddress: "",
-  companyPhone: "",
-  companyEmail: "",
-  companyTaxCode: "",
+  companyName: "Công ty TNHH Dịch Vụ Tư Vấn Doanh Nghiệp Việt",
+  companyAddress: "Số 15, ngõ 12 phố Phan Đình Giót, phường Phương Liệt, TP. Hà Nội",
+  companyPhone: "0966 863 672 / 0842 001 236",
+  companyEmail: "sales@vietconsulting.org",
+  companyTaxCode: "0109499676",
   reminderDays: 30,
 };
 
