@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quản lý Hợp đồng Tư vấn</title>
+<style>
+:root {
+  --navy: #0f172a;
+  --navy-2: #1e293b;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --green: #16a34a;
+  --amber: #d97706;
+  --red: #dc2626;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--navy);
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 16px;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.brand-title { font-weight: 600; font-size: 14px; color: #fff; }
+.brand-sub { font-size: 11.5px; color: #94a3b8; }
+
+.nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+
+.nav-item {
+  display: block;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.nav-item:hover { background: rgba(255,255,255,0.06); }
+.nav-item.active { background: var(--primary); color: #fff; }
+
+.sidebar-footer {
+  font-size: 11px;
+  color: #64748b;
+  padding: 10px 8px 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Content */
+.content {
+  flex: 1;
+  padding: 28px 32px;
+  overflow-y: auto;
+  max-width: 100%;
+}
+
+.view { display: none; }
+.view.active { display: block; }
+
+.page-header { margin-bottom: 20px; }
+.page-header h2 { margin: 0 0 4px; font-size: 21px; }
+.page-header.row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.muted { color: var(--text-muted); }
+.small { font-size: 12px; }
+.hint { color: var(--amber); font-size: 12.5px; margin-top: 8px; }
+
+.row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+
+/* Buttons */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.btn:hover { background: #f1f5f9; }
+.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-sm { padding: 5px 10px; font-size: 12.5px; }
+.btn.danger { color: var(--red); border-color: #fecaca; }
+.btn.danger:hover { background: #fef2f2; }
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--text-muted);
+}
+.icon-btn:hover { background: #f1f5f9; color: var(--text); }
+.icon-btn.danger:hover { background: #fef2f2; color: var(--red); }
+
+/* Stat cards */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  border-left: 4px solid var(--primary);
+}
+.stat-card.tone-blue { border-left-color: #2563eb; }
+.stat-card.tone-indigo { border-left-color: #6366f1; }
+.stat-card.tone-green { border-left-color: #16a34a; }
+.stat-card.tone-teal { border-left-color: #0d9488; }
+.stat-card.tone-amber { border-left-color: #d97706; }
+.stat-card.tone-red { border-left-color: #dc2626; }
+
+.stat-label { font-size: 12.5px; color: var(--text-muted); margin-bottom: 6px; }
+.stat-value { font-size: 20px; font-weight: 700; }
+
+/* Cards & grid layout */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+.card h3 { margin: 0 0 12px; font-size: 14.5px; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .sidebar { width: 76px; }
+  .brand-title, .brand-sub, .sidebar-footer, .nav-item { display: none; }
+  .brand { justify-content: center; }
+}
+
+/* Alerts */
+.alert-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+.alert-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border-left: 3px solid var(--amber);
+  font-size: 13px;
+}
+.alert-item.danger { border-left-color: var(--red); background: #fef2f2; }
+.alert-item.warning { border-left-color: var(--amber); background: #fffbeb; }
+.empty { color: var(--text-muted); text-align: center; padding: 18px 0; font-size: 13px; }
+
+/* Toolbar & tables */
+.toolbar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.toolbar input, .toolbar select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13.5px; }
+.toolbar input { flex: 1; min-width: 220px; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover { background: #f8fafc; }
+.actions { display: flex; gap: 2px; white-space: nowrap; }
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.badge-red { background: #fee2e2; color: #dc2626; }
+.badge-amber { background: #fef3c7; color: #d97706; }
+.badge-green { background: #dcfce7; color: #16a34a; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+.modal-dialog {
+  background: var(--surface);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+}
+.modal-dialog.wide { max-width: 760px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.modal-header h3 { margin: 0; font-size: 16px; }
+.modal-body { padding: 20px; overflow-y: auto; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Forms */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
+.form-grid .col-span-2 { grid-column: span 2; }
+.form-grid input, .form-grid select, .form-grid textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--text);
+  font-family: inherit;
+}
+.form-grid textarea { resize: vertical; }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.detail-grid .muted { font-size: 11.5px; display: block; margin-bottom: 2px; }
+
+.totals-box { max-width: 300px; margin-left: auto; font-size: 13px; }
+.totals-box div { display: flex; justify-content: space-between; padding: 4px 0; }
+.totals-box .grand { font-weight: 700; border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px; font-size: 14.5px; }
+
+canvas { width: 100%; display: block; }
+
+</style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">HĐ</span>
+        <div>
+          <div class="brand-title">Hợp Đồng Tư Vấn</div>
+          <div class="brand-sub">Quản lý chuyên nghiệp</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">📊 Tổng quan</button>
+        <button class="nav-item" data-view="contracts">📄 Hợp đồng</button>
+        <button class="nav-item" data-view="clients">👥 Khách hàng</button>
+        <button class="nav-item" data-view="quotes">🧾 Báo giá</button>
+        <button class="nav-item" data-view="reports">📈 Báo cáo</button>
+        <button class="nav-item" data-view="settings">⚙️ Cài đặt</button>
+      </nav>
+      <div class="sidebar-footer">Dữ liệu lưu tại trình duyệt này</div>
+    </aside>
+    <main class="content">
+      <section id="view-dashboard" class="view active"></section>
+      <section id="view-contracts" class="view"></section>
+      <section id="view-clients" class="view"></section>
+      <section id="view-quotes" class="view"></section>
+      <section id="view-reports" class="view"></section>
+      <section id="view-settings" class="view"></section>
+    </main>
+  </div>
+  <div id="modal-root"></div>
+  <script>
+/* ===== utils.js ===== */
+function uid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "id-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function formatCurrency(n) {
+  const num = Number(n) || 0;
+  return num.toLocaleString("vi-VN") + " đ";
+}
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d)) return "—";
+  return d.toLocaleDateString("vi-VN");
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  if (isNaN(target)) return null;
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target - today) / 86400000);
+}
+
+function escapeHtml(str = "") {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[c]));
+}
+
+/* ===== charts.js ===== */
+function setupCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const height = rect.height || Number(canvas.getAttribute("height")) || 220;
+  canvas.style.height = height + "px";
+  canvas.width = rect.width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, width: rect.width, height };
+}
+
+function roundRectTop(ctx, x, y, w, h, r) {
+  if (h <= 0.5) return;
+  const rr = Math.min(r, w / 2, h);
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x, y + rr);
+  ctx.arcTo(x, y, x + rr, y, rr);
+  ctx.lineTo(x + w - rr, y);
+  ctx.arcTo(x + w, y, x + w, y + rr, rr);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+}
+
+function drawBarChart(canvas, labels, values, { color = "#2563eb", formatValue } = {}) {
+  const { ctx, width, height } = setupCanvas(canvas);
+  const padding = { top: 16, right: 12, bottom: 26, left: 54 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+  const max = Math.max(1, ...values);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.font = "11px system-ui, sans-serif";
+  ctx.fillStyle = "#94a3b8";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const y = padding.top + chartH - (chartH / steps) * i;
+    const val = (max / steps) * i;
+    ctx.strokeStyle = "#eef2f7";
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText(formatValue ? formatValue(val) : String(Math.round(val)), padding.left - 8, y);
+  }
+
+  const gap = chartW / values.length;
+  const barW = Math.min(36, gap * 0.55);
+  ctx.textAlign = "center";
+  values.forEach((v, i) => {
+    const x = padding.left + gap * i + (gap - barW) / 2;
+    const h = max === 0 ? 0 : (v / max) * chartH;
+    const y = padding.top + chartH - h;
+    ctx.fillStyle = color;
+    roundRectTop(ctx, x, y, barW, h, 4);
+    ctx.fill();
+    ctx.fillStyle = "#64748b";
+    ctx.font = "11px system-ui, sans-serif";
+    ctx.fillText(labels[i], x + barW / 2, padding.top + chartH + 16);
+  });
+}
+
+function drawDonutChart(canvas, segments) {
+  const { ctx, width, height } = setupCanvas(canvas);
+  ctx.clearRect(0, 0, width, height);
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  const legendW = 150;
+  const cx = Math.min((width - legendW) / 2, height / 2);
+  const cy = height / 2;
+  const radius = Math.max(30, Math.min(cx, cy) - 8);
+  const inner = radius * 0.62;
+
+  if (total === 0) {
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = radius - inner;
+    ctx.beginPath();
+    ctx.arc(cx, cy, (radius + inner) / 2, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    let start = -Math.PI / 2;
+    segments.forEach((seg) => {
+      if (seg.value <= 0) return;
+      const angle = (seg.value / total) * Math.PI * 2;
+      ctx.fillStyle = seg.color;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, start, start + angle);
+      ctx.closePath();
+      ctx.fill();
+      start += angle;
+    });
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.font = "12px system-ui, sans-serif";
+  let ly = cy - (segments.length * 20) / 2 + 10;
+  segments.forEach((seg) => {
+    ctx.fillStyle = seg.color;
+    ctx.fillRect(cx + radius + 16, ly - 5, 10, 10);
+    ctx.fillStyle = "#334155";
+    ctx.fillText(`${seg.label} (${seg.value})`, cx + radius + 32, ly);
+    ly += 20;
+  });
+}
+
+/* ===== store.js ===== */
+const KEYS = {
+  clients: "cms_clients",
+  contracts: "cms_contracts",
+  quotes: "cms_quotes",
+  settings: "cms_settings",
+  seq: "cms_seq",
+};
+
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    console.error("Lỗi đọc dữ liệu", key, e);
+    return fallback;
+  }
+}
+
+function save(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+const defaultSettings = {
+  companyName: "Công ty TNHH Dịch Vụ Tư Vấn Doanh Nghiệp Việt",
+  companyAddress: "Số 15, ngõ 12 phố Phan Đình Giót, phường Phương Liệt, TP. Hà Nội",
+  companyPhone: "0966 863 672 / 0842 001 236",
+  companyEmail: "sales@vietconsulting.org",
+  companyTaxCode: "0109499676",
+  reminderDays: 30,
+};
+
+const Store = {
+  // Clients
+  getClients() { return load(KEYS.clients, []); },
+  saveClients(list) { save(KEYS.clients, list); },
+  addClient(data) {
+    const list = this.getClients();
+    const item = { id: uid(), createdAt: new Date().toISOString(), ...data };
+    list.push(item);
+    this.saveClients(list);
+    return item;
+  },
+  updateClient(id, patch) {
+    const list = this.getClients();
+    const idx = list.findIndex((c) => c.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...patch };
+    this.saveClients(list);
+    return list[idx];
+  },
+  deleteClient(id) {
+    this.saveClients(this.getClients().filter((c) => c.id !== id));
+  },
+  getClient(id) { return this.getClients().find((c) => c.id === id) || null; },
+
+  // Contracts
+  getContracts() { return load(KEYS.contracts, []); },
+  saveContracts(list) { save(KEYS.contracts, list); },
+  addContract(data) {
+    const list = this.getContracts();
+    const item = { id: uid(), payments: [], createdAt: new Date().toISOString(), ...data };
+    list.push(item);
+    this.saveContracts(list);
+    return item;
+  },
+  updateContract(id, patch) {
+    const list = this.getContracts();
+    const idx = list.findIndex((c) => c.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...patch };
+    this.saveContracts(list);
+    return list[idx];
+  },
+  deleteContract(id) {
+    this.saveContracts(this.getContracts().filter((c) => c.id !== id));
+  },
+  getContract(id) { return this.getContracts().find((c) => c.id === id) || null; },
+
+  // Quotes
+  getQuotes() { return load(KEYS.quotes, []); },
+  saveQuotes(list) { save(KEYS.quotes, list); },
+  addQuote(data) {
+    const list = this.getQuotes();
+    const item = { id: uid(), createdAt: new Date().toISOString(), ...data };
+    list.push(item);
+    this.saveQuotes(list);
+    return item;
+  },
+  updateQuote(id, patch) {
+    const list = this.getQuotes();
+    const idx = list.findIndex((q) => q.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...patch };
+    this.saveQuotes(list);
+    return list[idx];
+  },
+  deleteQuote(id) {
+    this.saveQuotes(this.getQuotes().filter((q) => q.id !== id));
+  },
+  getQuote(id) { return this.getQuotes().find((q) => q.id === id) || null; },
+
+  // Settings
+  getSettings() { return { ...defaultSettings, ...load(KEYS.settings, {}) }; },
+  saveSettings(data) { save(KEYS.settings, { ...this.getSettings(), ...data }); },
+
+  // Auto document codes, e.g. HD-2026-001
+  nextCode(prefix) {
+    const seq = load(KEYS.seq, {});
+    const year = new Date().getFullYear();
+    const key = `${prefix}-${year}`;
+    const next = (seq[key] || 0) + 1;
+    seq[key] = next;
+    save(KEYS.seq, seq);
+    return `${prefix}-${year}-${String(next).padStart(3, "0")}`;
+  },
+
+  // Backup / restore
+  exportAll() {
+    return {
+      clients: this.getClients(),
+      contracts: this.getContracts(),
+      quotes: this.getQuotes(),
+      settings: this.getSettings(),
+      exportedAt: new Date().toISOString(),
+    };
+  },
+  importAll(data) {
+    if (data.clients) this.saveClients(data.clients);
+    if (data.contracts) this.saveContracts(data.contracts);
+    if (data.quotes) this.saveQuotes(data.quotes);
+    if (data.settings) this.saveSettings(data.settings);
+  },
+  clearAll() {
+    Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
+  },
+};
+
+/* ===== main.js ===== */
+const STATUS_CONTRACT = {
+  draft: { label: "Nháp", color: "#64748b" },
+  active: { label: "Đang thực hiện", color: "#2563eb" },
+  completed: { label: "Hoàn thành", color: "#16a34a" },
+  cancelled: { label: "Đã hủy", color: "#dc2626" },
+};
+
+const STATUS_QUOTE = {
+  draft: { label: "Nháp", color: "#64748b" },
+  sent: { label: "Đã gửi", color: "#2563eb" },
+  accepted: { label: "Chấp nhận", color: "#16a34a" },
+  rejected: { label: "Từ chối", color: "#dc2626" },
+  converted: { label: "Đã thành HĐ", color: "#7c3aed" },
+};
+
+const state = {
+  view: "dashboard",
+  contractSearch: "",
+  contractStatus: "all",
+  clientSearch: "",
+  quoteSearch: "",
+  quoteStatus: "all",
+  reportYear: new Date().getFullYear(),
+};
+
+/* ---------------- Navigation ---------------- */
+function setView(view) {
+  state.view = view;
+  document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  switch (state.view) {
+    case "dashboard": return renderDashboard();
+    case "contracts": return renderContracts();
+    case "clients": return renderClients();
+    case "quotes": return renderQuotes();
+    case "reports": return renderReports();
+    case "settings": return renderSettings();
+  }
+}
+
+document.querySelectorAll(".nav-item").forEach((btn) => {
+  btn.addEventListener("click", () => setView(btn.dataset.view));
+});
+
+/* ---------------- Modal helper ---------------- */
+const modalRoot = document.getElementById("modal-root");
+let escListener = null;
+
+function closeModal() {
+  modalRoot.innerHTML = "";
+  if (escListener) { document.removeEventListener("keydown", escListener); escListener = null; }
+}
+
+function openModal({ title, bodyHtml, footerHtml = "", onMount, wide = false }) {
+  modalRoot.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal-dialog ${wide ? "wide" : ""}">
+        <div class="modal-header">
+          <h3>${title}</h3>
+          <button class="icon-btn" data-close>&times;</button>
+        </div>
+        <div class="modal-body">${bodyHtml}</div>
+        ${footerHtml ? `<div class="modal-footer">${footerHtml}</div>` : ""}
+      </div>
+    </div>`;
+  const overlay = modalRoot.querySelector(".modal-overlay");
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+  modalRoot.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", closeModal));
+  escListener = (e) => { if (e.key === "Escape") closeModal(); };
+  document.addEventListener("keydown", escListener);
+  if (onMount) onMount(modalRoot.querySelector(".modal-dialog"));
+}
+
+/* ---------------- Shared helpers ---------------- */
+function clientOptions(selectedId) {
+  const clients = Store.getClients().slice().sort((a, b) => a.name.localeCompare(b.name, "vi"));
+  if (clients.length === 0) return `<option value="">— Chưa có khách hàng —</option>`;
+  return clients.map((c) => `<option value="${c.id}" ${c.id === selectedId ? "selected" : ""}>${escapeHtml(c.name)}${c.company ? ` (${escapeHtml(c.company)})` : ""}</option>`).join("");
+}
+
+function statCard(label, value, tone) {
+  return `<div class="stat-card tone-${tone}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>`;
+}
+
+function monthLabels() { return Array.from({ length: 12 }, (_, i) => `T${i + 1}`); }
+
+function monthlyRevenue(contracts, year) {
+  const arr = new Array(12).fill(0);
+  contracts.forEach((c) => (c.payments || []).forEach((p) => {
+    if (p.paidDate) {
+      const d = new Date(p.paidDate);
+      if (d.getFullYear() === year) arr[d.getMonth()] += Number(p.amount || 0);
+    }
+  }));
+  return arr;
+}
+
+function quoteTotal(q) {
+  const sub = (q.items || []).reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0);
+  const discount = sub * (Number(q.discountPct || 0) / 100);
+  const afterDiscount = sub - discount;
+  const tax = afterDiscount * (Number(q.taxPct || 0) / 100);
+  return { sub, discount, tax, total: afterDiscount + tax };
+}
+
+/* ================= DASHBOARD ================= */
+function renderDashboard() {
+  const el = document.getElementById("view-dashboard");
+  const contracts = Store.getContracts();
+  const settings = Store.getSettings();
+
+  const activeContracts = contracts.filter((c) => c.status === "active");
+  const totalValue = contracts.filter((c) => c.status !== "cancelled").reduce((s, c) => s + Number(c.value || 0), 0);
+  const totalPaid = contracts.reduce((s, c) => s + (c.payments || []).filter((p) => p.paidDate).reduce((s2, p) => s2 + Number(p.amount || 0), 0), 0);
+  const totalOutstanding = Math.max(0, totalValue - totalPaid);
+
+  const expiringSoon = activeContracts
+    .filter((c) => { const d = daysUntil(c.endDate); return d !== null && d >= 0 && d <= (settings.reminderDays || 30); })
+    .sort((a, b) => daysUntil(a.endDate) - daysUntil(b.endDate));
+  const overdueContracts = activeContracts.filter((c) => { const d = daysUntil(c.endDate); return d !== null && d < 0; });
+
+  const overduePayments = [];
+  contracts.forEach((c) => (c.payments || []).forEach((p) => {
+    if (!p.paidDate && p.dueDate && daysUntil(p.dueDate) < 0) overduePayments.push({ contract: c, payment: p });
+  }));
+
+  el.innerHTML = `
+    <div class="page-header"><h2>Tổng quan</h2><p class="muted">Tình hình hợp đồng tư vấn của bạn.</p></div>
+    <div class="stat-grid">
+      ${statCard("Tổng hợp đồng", contracts.length, "blue")}
+      ${statCard("Đang thực hiện", activeContracts.length, "indigo")}
+      ${statCard("Tổng giá trị", formatCurrency(totalValue), "green")}
+      ${statCard("Đã thu", formatCurrency(totalPaid), "teal")}
+      ${statCard("Còn phải thu", formatCurrency(totalOutstanding), "amber")}
+      ${statCard("Sắp / đã hết hạn", expiringSoon.length + overdueContracts.length, "red")}
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Doanh thu theo tháng (${new Date().getFullYear()})</h3>
+        <canvas id="chart-revenue" height="220"></canvas>
+      </div>
+      <div class="card">
+        <h3>Hợp đồng theo trạng thái</h3>
+        <canvas id="chart-status" height="220"></canvas>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>⏰ Hợp đồng sắp / đã hết hạn</h3>
+        ${renderAlertList([...expiringSoon.map((c) => alertRowContract(c, false)), ...overdueContracts.map((c) => alertRowContract(c, true))])}
+      </div>
+      <div class="card">
+        <h3>💸 Thanh toán quá hạn</h3>
+        ${renderAlertList(overduePayments.map(({ contract, payment }) => alertRowPayment(contract, payment)))}
+      </div>
+    </div>
+  `;
+
+  drawBarChart(document.getElementById("chart-revenue"), monthLabels(), monthlyRevenue(contracts, new Date().getFullYear()), { formatValue: (v) => (v / 1e6).toFixed(0) + "tr" });
+  drawDonutChart(document.getElementById("chart-status"), Object.entries(STATUS_CONTRACT).map(([key, meta]) => ({ label: meta.label, value: contracts.filter((c) => c.status === key).length, color: meta.color })));
+}
+
+function renderAlertList(rows) {
+  if (rows.length === 0) return `<p class="empty">Không có cảnh báo nào 🎉</p>`;
+  return `<ul class="alert-list">${rows.join("")}</ul>`;
+}
+
+function alertRowContract(c, overdue) {
+  const d = daysUntil(c.endDate);
+  const client = Store.getClient(c.clientId);
+  return `<li class="alert-item ${overdue ? "danger" : "warning"}">
+    <div><strong>${escapeHtml(c.code)}</strong> — ${escapeHtml(client ? client.name : "")}
+    <div class="muted small">${escapeHtml(c.title || "")}</div></div>
+    <span class="badge ${overdue ? "badge-red" : "badge-amber"}">${overdue ? `Quá hạn ${Math.abs(d)} ngày` : `Còn ${d} ngày`}</span>
+  </li>`;
+}
+
+function alertRowPayment(contract, payment) {
+  const client = Store.getClient(contract.clientId);
+  const d = daysUntil(payment.dueDate);
+  return `<li class="alert-item danger">
+    <div><strong>${escapeHtml(contract.code)}</strong> — ${escapeHtml(client ? client.name : "")}
+    <div class="muted small">Đợt thanh toán ${formatCurrency(payment.amount)}</div></div>
+    <span class="badge badge-red">Quá hạn ${Math.abs(d)} ngày</span>
+  </li>`;
+}
+
+/* ================= CONTRACTS ================= */
+function renderContracts() {
+  const el = document.getElementById("view-contracts");
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Hợp đồng</h2><p class="muted">Quản lý toàn bộ hợp đồng tư vấn</p></div>
+      <button class="btn btn-primary" id="btn-add-contract">+ Thêm hợp đồng</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="contract-search" placeholder="Tìm theo mã, tiêu đề, khách hàng..." value="${escapeHtml(state.contractSearch)}" />
+      <select id="contract-status-filter">
+        <option value="all">Tất cả trạng thái</option>
+        ${Object.entries(STATUS_CONTRACT).map(([k, m]) => `<option value="${k}" ${state.contractStatus === k ? "selected" : ""}>${m.label}</option>`).join("")}
+      </select>
+    </div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Mã HĐ</th><th>Khách hàng</th><th>Tiêu đề</th><th>Giá trị</th><th>Bắt đầu</th><th>Kết thúc</th><th>Trạng thái</th><th>Thu / Còn lại</th><th></th></tr></thead>
+      <tbody id="contracts-tbody"></tbody>
+    </table></div>
+  `;
+  document.getElementById("btn-add-contract").addEventListener("click", () => openContractForm());
+  document.getElementById("contract-search").addEventListener("input", (e) => { state.contractSearch = e.target.value; renderContractsTable(); });
+  document.getElementById("contract-status-filter").addEventListener("change", (e) => { state.contractStatus = e.target.value; renderContractsTable(); });
+  renderContractsTable();
+}
+
+function renderContractsTable() {
+  const tbody = document.getElementById("contracts-tbody");
+  if (!tbody) return;
+  let contracts = Store.getContracts();
+  const q = state.contractSearch.trim().toLowerCase();
+  contracts = contracts.filter((c) => {
+    const client = Store.getClient(c.clientId);
+    const hay = `${c.code} ${c.title} ${client ? client.name : ""}`.toLowerCase();
+    const matchQ = !q || hay.includes(q);
+    const matchStatus = state.contractStatus === "all" || c.status === state.contractStatus;
+    return matchQ && matchStatus;
+  });
+  contracts.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+  if (contracts.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="empty">Chưa có hợp đồng nào phù hợp</td></tr>`; return; }
+
+  tbody.innerHTML = contracts.map((c) => {
+    const client = Store.getClient(c.clientId);
+    const paid = (c.payments || []).filter((p) => p.paidDate).reduce((s, p) => s + Number(p.amount || 0), 0);
+    const remain = Math.max(0, Number(c.value || 0) - paid);
+    const d = daysUntil(c.endDate);
+    const meta = STATUS_CONTRACT[c.status] || { label: c.status, color: "#64748b" };
+    let statusBadge = `<span class="badge" style="background:${meta.color}22;color:${meta.color}">${meta.label}</span>`;
+    if (c.status === "active" && d !== null && d < 0) statusBadge += ` <span class="badge badge-red">Quá hạn</span>`;
+    else if (c.status === "active" && d !== null && d <= 30) statusBadge += ` <span class="badge badge-amber">Còn ${d} ngày</span>`;
+    return `<tr>
+      <td>${escapeHtml(c.code)}</td>
+      <td>${escapeHtml(client ? client.name : "—")}</td>
+      <td>${escapeHtml(c.title || "")}</td>
+      <td>${formatCurrency(c.value)}</td>
+      <td>${formatDate(c.startDate)}</td>
+      <td>${formatDate(c.endDate)}</td>
+      <td>${statusBadge}</td>
+      <td>${formatCurrency(paid)} / <span class="muted">${formatCurrency(remain)}</span></td>
+      <td class="actions">
+        <button class="icon-btn" data-view-id="${c.id}" title="Xem chi tiết">👁</button>
+        <button class="icon-btn" data-edit-id="${c.id}" title="Sửa">✎</button>
+        <button class="icon-btn danger" data-del-id="${c.id}" title="Xóa">🗑</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll("[data-view-id]").forEach((b) => b.addEventListener("click", () => openContractDetail(b.dataset.viewId)));
+  tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openContractForm(b.dataset.editId)));
+  tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (confirm("Xóa hợp đồng này? Hành động không thể hoàn tác.")) { Store.deleteContract(b.dataset.delId); renderContractsTable(); }
+  }));
+}
+
+function openContractForm(id, prefill, onSaved) {
+  const editing = id ? Store.getContract(id) : null;
+  const data = editing || prefill || {};
+  openModal({
+    title: editing ? "Sửa hợp đồng" : "Thêm hợp đồng",
+    wide: true,
+    bodyHtml: `
+      <form id="contract-form" class="form-grid">
+        <label>Khách hàng
+          <select name="clientId" required>${clientOptions(data.clientId)}</select>
+        </label>
+        <label>Tiêu đề hợp đồng
+          <input name="title" required value="${escapeHtml(data.title || "")}" placeholder="VD: Tư vấn chiến lược kinh doanh Q3" />
+        </label>
+        <label class="col-span-2">Mô tả / phạm vi công việc
+          <textarea name="description" rows="2">${escapeHtml(data.description || "")}</textarea>
+        </label>
+        <label>Ngày ký
+          <input type="date" name="signDate" value="${data.signDate || todayISO()}" />
+        </label>
+        <label>Ngày bắt đầu
+          <input type="date" name="startDate" value="${data.startDate || todayISO()}" required />
+        </label>
+        <label>Ngày kết thúc
+          <input type="date" name="endDate" value="${data.endDate || ""}" required />
+        </label>
+        <label>Giá trị hợp đồng (đ)
+          <input type="number" name="value" min="0" step="1000" value="${data.value ?? ""}" required />
+        </label>
+        <label>Trạng thái
+          <select name="status">${Object.entries(STATUS_CONTRACT).map(([k, m]) => `<option value="${k}" ${data.status ? (data.status === k ? "selected" : "") : (k === "draft" ? "selected" : "")}>${m.label}</option>`).join("")}</select>
+        </label>
+        <label class="col-span-2">Ghi chú
+          <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
+        </label>
+      </form>
+      ${Store.getClients().length === 0 ? '<p class="hint">Bạn chưa có khách hàng nào. Hãy vào mục Khách hàng để thêm trước.</p>' : ""}
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="contract-save">${editing ? "Lưu thay đổi" : "Tạo hợp đồng"}</button>`,
+    onMount: () => {
+      document.getElementById("contract-save").addEventListener("click", () => {
+        const form = document.getElementById("contract-form");
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        payload.value = Number(payload.value);
+        let saved;
+        if (editing) {
+          saved = Store.updateContract(editing.id, payload);
+        } else {
+          payload.code = Store.nextCode("HD");
+          payload.payments = prefill?.payments || [];
+          saved = Store.addContract(payload);
+        }
+        closeModal();
+        if (onSaved) onSaved(saved);
+        renderCurrentView();
+      });
+    },
+  });
+}
+
+function openContractDetail(id) {
+  const c = Store.getContract(id);
+  if (!c) return;
+  const client = Store.getClient(c.clientId);
+  const paid = (c.payments || []).filter((p) => p.paidDate).reduce((s, p) => s + Number(p.amount || 0), 0);
+  const remain = Math.max(0, Number(c.value || 0) - paid);
+  openModal({
+    title: `Chi tiết hợp đồng ${c.code}`,
+    wide: true,
+    bodyHtml: `
+      <div class="detail-grid">
+        <div><span class="muted">Khách hàng</span><div>${escapeHtml(client ? client.name : "—")}${client?.company ? ` (${escapeHtml(client.company)})` : ""}</div></div>
+        <div><span class="muted">Trạng thái</span><div>${STATUS_CONTRACT[c.status]?.label || c.status}</div></div>
+        <div><span class="muted">Ngày ký</span><div>${formatDate(c.signDate)}</div></div>
+        <div><span class="muted">Thời hạn</span><div>${formatDate(c.startDate)} — ${formatDate(c.endDate)}</div></div>
+        <div><span class="muted">Giá trị</span><div>${formatCurrency(c.value)}</div></div>
+        <div><span class="muted">Đã thu / Còn lại</span><div>${formatCurrency(paid)} / ${formatCurrency(remain)}</div></div>
+      </div>
+      ${c.description ? `<p><span class="muted">Mô tả:</span> ${escapeHtml(c.description)}</p>` : ""}
+      ${c.note ? `<p><span class="muted">Ghi chú:</span> ${escapeHtml(c.note)}</p>` : ""}
+      <div class="row" style="margin-top:16px;align-items:center;">
+        <h4 style="margin:0">Lịch thanh toán</h4>
+        <button class="btn btn-sm" id="btn-add-payment">+ Thêm đợt thanh toán</button>
+      </div>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Hạn thanh toán</th><th>Số tiền</th><th>Trạng thái</th><th>Ngày thu</th><th></th></tr></thead>
+        <tbody id="payments-tbody"></tbody>
+      </table></div>
+    `,
+    footerHtml: `<button class="btn" data-close>Đóng</button>`,
+    onMount: () => {
+      renderPaymentsTbody(c.id);
+      document.getElementById("btn-add-payment").addEventListener("click", () => openPaymentForm(c.id));
+    },
+  });
+}
+
+function renderPaymentsTbody(contractId) {
+  const c = Store.getContract(contractId);
+  const tbody = document.getElementById("payments-tbody");
+  if (!tbody || !c) return;
+  const payments = (c.payments || []).slice().sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
+  if (payments.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="empty">Chưa có đợt thanh toán nào</td></tr>`; return; }
+  tbody.innerHTML = payments.map((p) => {
+    const overdue = !p.paidDate && p.dueDate && daysUntil(p.dueDate) < 0;
+    const status = p.paidDate ? `<span class="badge badge-green">Đã thu</span>` : overdue ? `<span class="badge badge-red">Quá hạn</span>` : `<span class="badge badge-amber">Chưa thu</span>`;
+    return `<tr>
+      <td>${formatDate(p.dueDate)}</td>
+      <td>${formatCurrency(p.amount)}</td>
+      <td>${status}</td>
+      <td>${formatDate(p.paidDate)}</td>
+      <td class="actions">
+        ${!p.paidDate ? `<button class="icon-btn" data-mark-paid="${p.id}" title="Đánh dấu đã thu">✔</button>` : ""}
+        <button class="icon-btn danger" data-del-payment="${p.id}" title="Xóa">🗑</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll("[data-mark-paid]").forEach((b) => b.addEventListener("click", () => {
+    const c2 = Store.getContract(contractId);
+    const payments2 = c2.payments.map((p) => (p.id === b.dataset.markPaid ? { ...p, paidDate: todayISO() } : p));
+    Store.updateContract(contractId, { payments: payments2 });
+    renderPaymentsTbody(contractId);
+    if (state.view === "contracts") renderContractsTable();
+  }));
+  tbody.querySelectorAll("[data-del-payment]").forEach((b) => b.addEventListener("click", () => {
+    if (!confirm("Xóa đợt thanh toán này?")) return;
+    const c2 = Store.getContract(contractId);
+    Store.updateContract(contractId, { payments: c2.payments.filter((p) => p.id !== b.dataset.delPayment) });
+    renderPaymentsTbody(contractId);
+    if (state.view === "contracts") renderContractsTable();
+  }));
+}
+
+function openPaymentForm(contractId) {
+  openModal({
+    title: "Thêm đợt thanh toán",
+    bodyHtml: `
+      <form id="payment-form" class="form-grid">
+        <label>Hạn thanh toán
+          <input type="date" name="dueDate" value="${todayISO()}" required />
+        </label>
+        <label>Số tiền (đ)
+          <input type="number" name="amount" min="0" step="1000" required />
+        </label>
+        <label class="col-span-2">Ghi chú
+          <input name="note" />
+        </label>
+        <label class="col-span-2"><input type="checkbox" name="paidNow" style="width:auto" /> Đã thu ngay hôm nay</label>
+      </form>
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="payment-save">Lưu</button>`,
+    onMount: () => {
+      document.getElementById("payment-save").addEventListener("click", () => {
+        const form = document.getElementById("payment-form");
+        if (!form.reportValidity()) return;
+        const fd = new FormData(form);
+        const c = Store.getContract(contractId);
+        const payment = {
+          id: uid(),
+          dueDate: fd.get("dueDate"),
+          amount: Number(fd.get("amount")),
+          note: fd.get("note") || "",
+          paidDate: fd.get("paidNow") ? todayISO() : null,
+        };
+        Store.updateContract(contractId, { payments: [...(c.payments || []), payment] });
+        closeModal();
+        openContractDetail(contractId);
+      });
+    },
+  });
+}
+
+/* ================= CLIENTS ================= */
+function renderClients() {
+  const el = document.getElementById("view-clients");
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Khách hàng</h2><p class="muted">Danh sách khách hàng sử dụng dịch vụ tư vấn</p></div>
+      <button class="btn btn-primary" id="btn-add-client">+ Thêm khách hàng</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="client-search" placeholder="Tìm theo tên, công ty, SĐT, email..." value="${escapeHtml(state.clientSearch)}" />
+    </div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Tên</th><th>Công ty</th><th>SĐT</th><th>Email</th><th>Số HĐ</th><th>Tổng giá trị</th><th></th></tr></thead>
+      <tbody id="clients-tbody"></tbody>
+    </table></div>
+  `;
+  document.getElementById("btn-add-client").addEventListener("click", () => openClientForm());
+  document.getElementById("client-search").addEventListener("input", (e) => { state.clientSearch = e.target.value; renderClientsTable(); });
+  renderClientsTable();
+}
+
+function renderClientsTable() {
+  const tbody = document.getElementById("clients-tbody");
+  if (!tbody) return;
+  let clients = Store.getClients();
+  const q = state.clientSearch.trim().toLowerCase();
+  if (q) clients = clients.filter((c) => `${c.name} ${c.company || ""} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(q));
+  clients.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+
+  if (clients.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="empty">Chưa có khách hàng nào</td></tr>`; return; }
+
+  const contracts = Store.getContracts();
+  const quotes = Store.getQuotes();
+  tbody.innerHTML = clients.map((c) => {
+    const cs = contracts.filter((k) => k.clientId === c.id);
+    const total = cs.reduce((s, k) => s + Number(k.value || 0), 0);
+    return `<tr>
+      <td>${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.company || "—")}</td>
+      <td>${escapeHtml(c.phone || "—")}</td>
+      <td>${escapeHtml(c.email || "—")}</td>
+      <td>${cs.length}</td>
+      <td>${formatCurrency(total)}</td>
+      <td class="actions">
+        <button class="icon-btn" data-edit-id="${c.id}" title="Sửa">✎</button>
+        <button class="icon-btn danger" data-del-id="${c.id}" title="Xóa">🗑</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openClientForm(b.dataset.editId)));
+  tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    const used = contracts.some((k) => k.clientId === b.dataset.delId) || quotes.some((qt) => qt.clientId === b.dataset.delId);
+    if (used) { alert("Không thể xóa: khách hàng đang có hợp đồng hoặc báo giá liên quan."); return; }
+    if (confirm("Xóa khách hàng này?")) { Store.deleteClient(b.dataset.delId); renderClientsTable(); }
+  }));
+}
+
+function openClientForm(id) {
+  const editing = id ? Store.getClient(id) : null;
+  const data = editing || {};
+  openModal({
+    title: editing ? "Sửa khách hàng" : "Thêm khách hàng",
+    bodyHtml: `
+      <form id="client-form" class="form-grid">
+        <label>Họ tên / Người liên hệ
+          <input name="name" required value="${escapeHtml(data.name || "")}" />
+        </label>
+        <label>Công ty
+          <input name="company" value="${escapeHtml(data.company || "")}" />
+        </label>
+        <label>Số điện thoại
+          <input name="phone" value="${escapeHtml(data.phone || "")}" />
+        </label>
+        <label>Email
+          <input type="email" name="email" value="${escapeHtml(data.email || "")}" />
+        </label>
+        <label>Mã số thuế
+          <input name="taxCode" value="${escapeHtml(data.taxCode || "")}" />
+        </label>
+        <label class="col-span-2">Địa chỉ
+          <input name="address" value="${escapeHtml(data.address || "")}" />
+        </label>
+        <label class="col-span-2">Ghi chú
+          <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
+        </label>
+      </form>
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="client-save">${editing ? "Lưu thay đổi" : "Thêm khách hàng"}</button>`,
+    onMount: () => {
+      document.getElementById("client-save").addEventListener("click", () => {
+        const form = document.getElementById("client-form");
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        if (editing) Store.updateClient(editing.id, payload); else Store.addClient(payload);
+        closeModal();
+        renderCurrentView();
+      });
+    },
+  });
+}
+
+/* ================= QUOTES ================= */
+function renderQuotes() {
+  const el = document.getElementById("view-quotes");
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Báo giá</h2><p class="muted">Lập báo giá dịch vụ tư vấn gửi khách hàng</p></div>
+      <button class="btn btn-primary" id="btn-add-quote">+ Tạo báo giá</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="quote-search" placeholder="Tìm theo mã, khách hàng..." value="${escapeHtml(state.quoteSearch)}" />
+      <select id="quote-status-filter">
+        <option value="all">Tất cả trạng thái</option>
+        ${Object.entries(STATUS_QUOTE).map(([k, m]) => `<option value="${k}" ${state.quoteStatus === k ? "selected" : ""}>${m.label}</option>`).join("")}
+      </select>
+    </div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Mã BG</th><th>Khách hàng</th><th>Ngày</th><th>Hiệu lực đến</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr></thead>
+      <tbody id="quotes-tbody"></tbody>
+    </table></div>
+  `;
+  document.getElementById("btn-add-quote").addEventListener("click", () => openQuoteForm());
+  document.getElementById("quote-search").addEventListener("input", (e) => { state.quoteSearch = e.target.value; renderQuotesTable(); });
+  document.getElementById("quote-status-filter").addEventListener("change", (e) => { state.quoteStatus = e.target.value; renderQuotesTable(); });
+  renderQuotesTable();
+}
+
+function renderQuotesTable() {
+  const tbody = document.getElementById("quotes-tbody");
+  if (!tbody) return;
+  let quotes = Store.getQuotes();
+  const q = state.quoteSearch.trim().toLowerCase();
+  quotes = quotes.filter((qt) => {
+    const client = Store.getClient(qt.clientId);
+    const hay = `${qt.code} ${client ? client.name : ""}`.toLowerCase();
+    const matchQ = !q || hay.includes(q);
+    const matchStatus = state.quoteStatus === "all" || qt.status === state.quoteStatus;
+    return matchQ && matchStatus;
+  });
+  quotes.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+  if (quotes.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="empty">Chưa có báo giá nào</td></tr>`; return; }
+
+  tbody.innerHTML = quotes.map((qt) => {
+    const client = Store.getClient(qt.clientId);
+    const { total } = quoteTotal(qt);
+    const meta = STATUS_QUOTE[qt.status] || { label: qt.status, color: "#64748b" };
+    return `<tr>
+      <td>${escapeHtml(qt.code)}</td>
+      <td>${escapeHtml(client ? client.name : "—")}</td>
+      <td>${formatDate(qt.date)}</td>
+      <td>${formatDate(qt.validUntil)}</td>
+      <td>${formatCurrency(total)}</td>
+      <td><span class="badge" style="background:${meta.color}22;color:${meta.color}">${meta.label}</span></td>
+      <td class="actions">
+        <button class="icon-btn" data-print-id="${qt.id}" title="In / Xem">🖨</button>
+        <button class="icon-btn" data-edit-id="${qt.id}" title="Sửa">✎</button>
+        ${qt.status !== "converted" ? `<button class="icon-btn" data-convert-id="${qt.id}" title="Chuyển thành hợp đồng">➜</button>` : ""}
+        <button class="icon-btn danger" data-del-id="${qt.id}" title="Xóa">🗑</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => printQuote(b.dataset.printId)));
+  tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openQuoteForm(b.dataset.editId)));
+  tbody.querySelectorAll("[data-convert-id]").forEach((b) => b.addEventListener("click", () => convertQuoteToContract(b.dataset.convertId)));
+  tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (confirm("Xóa báo giá này?")) { Store.deleteQuote(b.dataset.delId); renderQuotesTable(); }
+  }));
+}
+
+function openQuoteForm(id) {
+  const editing = id ? Store.getQuote(id) : null;
+  const data = editing || { items: [{ description: "", unit: "gói", quantity: 1, unitPrice: 0 }], taxPct: 10 };
+
+  openModal({
+    title: editing ? "Sửa báo giá" : "Tạo báo giá",
+    wide: true,
+    bodyHtml: `
+      <form id="quote-form" class="form-grid">
+        <label>Khách hàng
+          <select name="clientId" required>${clientOptions(data.clientId)}</select>
+        </label>
+        <label>Trạng thái
+          <select name="status">${Object.entries(STATUS_QUOTE).filter(([k]) => k !== "converted").map(([k, m]) => `<option value="${k}" ${data.status ? (data.status === k ? "selected" : "") : (k === "draft" ? "selected" : "")}>${m.label}</option>`).join("")}</select>
+        </label>
+        <label>Ngày báo giá
+          <input type="date" name="date" value="${data.date || todayISO()}" />
+        </label>
+        <label>Hiệu lực đến
+          <input type="date" name="validUntil" value="${data.validUntil || ""}" />
+        </label>
+        <div class="col-span-2">
+          <div class="row" style="align-items:center;"><h4 style="margin:8px 0">Hạng mục dịch vụ</h4><button type="button" class="btn btn-sm" id="btn-add-item">+ Thêm dòng</button></div>
+          <div class="table-wrap"><table class="data-table">
+            <thead><tr><th>Mô tả</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th><th></th></tr></thead>
+            <tbody id="items-tbody"></tbody>
+          </table></div>
+        </div>
+        <label>Chiết khấu (%)
+          <input type="number" name="discountPct" min="0" max="100" value="${data.discountPct || 0}" />
+        </label>
+        <label>Thuế VAT (%)
+          <input type="number" name="taxPct" min="0" max="100" value="${data.taxPct ?? 10}" />
+        </label>
+        <div class="col-span-2" id="quote-total-line"></div>
+        <label class="col-span-2">Ghi chú
+          <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
+        </label>
+      </form>
+      ${Store.getClients().length === 0 ? '<p class="hint">Bạn chưa có khách hàng nào. Hãy vào mục Khách hàng để thêm trước.</p>' : ""}
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="quote-save">${editing ? "Lưu thay đổi" : "Tạo báo giá"}</button>`,
+    onMount: () => {
+      let items = (data.items || []).map((i) => ({ ...i }));
+      const tbody = document.getElementById("items-tbody");
+      const form = document.getElementById("quote-form");
+
+      function renderItems() {
+        tbody.innerHTML = items.map((it, idx) => `
+          <tr>
+            <td><input data-idx="${idx}" data-field="description" value="${escapeHtml(it.description || "")}" placeholder="Mô tả dịch vụ" /></td>
+            <td><input data-idx="${idx}" data-field="unit" value="${escapeHtml(it.unit || "")}" style="width:70px" /></td>
+            <td><input type="number" min="0" data-idx="${idx}" data-field="quantity" value="${it.quantity ?? 1}" style="width:64px" /></td>
+            <td><input type="number" min="0" step="1000" data-idx="${idx}" data-field="unitPrice" value="${it.unitPrice ?? 0}" style="width:120px" /></td>
+            <td class="line-total">${formatCurrency(Number(it.quantity || 0) * Number(it.unitPrice || 0))}</td>
+            <td><button type="button" class="icon-btn danger" data-remove="${idx}">🗑</button></td>
+          </tr>`).join("");
+        tbody.querySelectorAll("input").forEach((inp) => inp.addEventListener("input", (e) => {
+          const idx = Number(e.target.dataset.idx);
+          const field = e.target.dataset.field;
+          items[idx][field] = (field === "quantity" || field === "unitPrice") ? Number(e.target.value) : e.target.value;
+          const row = e.target.closest("tr");
+          row.querySelector(".line-total").textContent = formatCurrency(Number(items[idx].quantity || 0) * Number(items[idx].unitPrice || 0));
+          updateTotals();
+        }));
+        tbody.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => {
+          items.splice(Number(b.dataset.remove), 1);
+          if (items.length === 0) items.push({ description: "", unit: "gói", quantity: 1, unitPrice: 0 });
+          renderItems();
+          updateTotals();
+        }));
+      }
+
+      function updateTotals() {
+        const discountPct = Number(form.discountPct.value || 0);
+        const taxPct = Number(form.taxPct.value || 0);
+        const sub = items.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0);
+        const discount = (sub * discountPct) / 100;
+        const afterDiscount = sub - discount;
+        const tax = (afterDiscount * taxPct) / 100;
+        const total = afterDiscount + tax;
+        document.getElementById("quote-total-line").innerHTML = `
+          <div class="totals-box">
+            <div><span>Tạm tính</span><span>${formatCurrency(sub)}</span></div>
+            <div><span>Chiết khấu</span><span>-${formatCurrency(discount)}</span></div>
+            <div><span>VAT</span><span>${formatCurrency(tax)}</span></div>
+            <div class="grand"><span>Tổng cộng</span><span>${formatCurrency(total)}</span></div>
+          </div>`;
+      }
+
+      renderItems();
+      updateTotals();
+      document.getElementById("btn-add-item").addEventListener("click", () => {
+        items.push({ description: "", unit: "gói", quantity: 1, unitPrice: 0 });
+        renderItems();
+        updateTotals();
+      });
+      form.discountPct.addEventListener("input", updateTotals);
+      form.taxPct.addEventListener("input", updateTotals);
+
+      document.getElementById("quote-save").addEventListener("click", () => {
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        payload.discountPct = Number(payload.discountPct || 0);
+        payload.taxPct = Number(payload.taxPct || 0);
+        payload.items = items.filter((i) => i.description);
+        if (editing) Store.updateQuote(editing.id, payload);
+        else { payload.code = Store.nextCode("BG"); Store.addQuote(payload); }
+        closeModal();
+        renderCurrentView();
+      });
+    },
+  });
+}
+
+function convertQuoteToContract(id) {
+  const q = Store.getQuote(id);
+  if (!q) return;
+  const { total } = quoteTotal(q);
+  closeModal();
+  openContractForm(null, {
+    clientId: q.clientId,
+    title: `Hợp đồng theo báo giá ${q.code}`,
+    description: (q.items || []).map((i) => `- ${i.description} (SL ${i.quantity} x ${formatCurrency(i.unitPrice)})`).join("\n"),
+    value: Math.round(total),
+  }, () => {
+    Store.updateQuote(id, { status: "converted" });
+    if (state.view === "quotes") renderQuotesTable();
+  });
+}
+
+function printQuote(id) {
+  const q = Store.getQuote(id);
+  if (!q) return;
+  const client = Store.getClient(q.clientId);
+  const settings = Store.getSettings();
+  const { sub, discount, tax, total } = quoteTotal(q);
+  const win = window.open("", "_blank", "width=900,height=1000");
+  if (!win) { alert("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup."); return; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Báo giá ${escapeHtml(q.code)}</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:32px;max-width:800px;margin:auto;}
+      h1{font-size:20px;margin:0;}
+      .muted{color:#64748b;}
+      table{width:100%;border-collapse:collapse;margin-top:16px;}
+      th,td{border:1px solid #cbd5e1;padding:8px;font-size:13px;text-align:left;}
+      th{background:#f1f5f9;}
+      .right{text-align:right;}
+      .totals{width:280px;margin-left:auto;margin-top:12px;}
+      .totals div{display:flex;justify-content:space-between;padding:4px 0;}
+      .grand{font-weight:bold;border-top:1px solid #334155;margin-top:4px;padding-top:8px !important;}
+      .header{display:flex;justify-content:space-between;border-bottom:2px solid #1e293b;padding-bottom:12px;margin-bottom:16px;}
+    </style></head><body>
+      <div class="header">
+        <div>
+          <h1>${escapeHtml(settings.companyName || "Công ty tư vấn")}</h1>
+          <div class="muted">${escapeHtml(settings.companyAddress || "")}</div>
+          <div class="muted">${escapeHtml(settings.companyPhone || "")} ${settings.companyEmail ? "· " + escapeHtml(settings.companyEmail) : ""}</div>
+          ${settings.companyTaxCode ? `<div class="muted">MST: ${escapeHtml(settings.companyTaxCode)}</div>` : ""}
+        </div>
+        <div class="right">
+          <h1>BÁO GIÁ</h1>
+          <div class="muted">Số: ${escapeHtml(q.code)}</div>
+          <div class="muted">Ngày: ${formatDate(q.date)}</div>
+          ${q.validUntil ? `<div class="muted">Hiệu lực đến: ${formatDate(q.validUntil)}</div>` : ""}
+        </div>
+      </div>
+      <p><strong>Kính gửi:</strong> ${escapeHtml(client ? client.name : "")}${client?.company ? ` — ${escapeHtml(client.company)}` : ""}</p>
+      ${client?.address ? `<p class="muted">${escapeHtml(client.address)}</p>` : ""}
+      <table>
+        <thead><tr><th>#</th><th>Mô tả dịch vụ</th><th>ĐVT</th><th>SL</th><th class="right">Đơn giá</th><th class="right">Thành tiền</th></tr></thead>
+        <tbody>
+          ${(q.items || []).map((it, idx) => `<tr><td>${idx + 1}</td><td>${escapeHtml(it.description)}</td><td>${escapeHtml(it.unit || "")}</td><td>${it.quantity}</td><td class="right">${formatCurrency(it.unitPrice)}</td><td class="right">${formatCurrency(it.quantity * it.unitPrice)}</td></tr>`).join("")}
+        </tbody>
+      </table>
+      <div class="totals">
+        <div><span>Tạm tính</span><span>${formatCurrency(sub)}</span></div>
+        <div><span>Chiết khấu (${q.discountPct || 0}%)</span><span>-${formatCurrency(discount)}</span></div>
+        <div><span>VAT (${q.taxPct || 0}%)</span><span>${formatCurrency(tax)}</span></div>
+        <div class="grand"><span>Tổng cộng</span><span>${formatCurrency(total)}</span></div>
+      </div>
+      ${q.note ? `<p style="margin-top:24px"><strong>Ghi chú:</strong> ${escapeHtml(q.note)}</p>` : ""}
+      <p class="muted" style="margin-top:48px">Cảm ơn quý khách đã quan tâm đến dịch vụ tư vấn của chúng tôi.</p>
+    </body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
+}
+
+/* ================= REPORTS ================= */
+function renderReports() {
+  const el = document.getElementById("view-reports");
+  const contracts = Store.getContracts();
+  const years = Array.from(new Set(contracts.map((c) => new Date(c.startDate || c.createdAt).getFullYear()).filter((y) => !isNaN(y))));
+  if (!years.includes(state.reportYear)) years.push(state.reportYear);
+  years.sort((a, b) => b - a);
+
+  const totalValue = contracts.filter((c) => c.status !== "cancelled").reduce((s, c) => s + Number(c.value || 0), 0);
+  const totalPaid = contracts.reduce((s, c) => s + (c.payments || []).filter((p) => p.paidDate).reduce((s2, p) => s2 + Number(p.amount || 0), 0), 0);
+  const avgValue = contracts.length ? totalValue / contracts.length : 0;
+
+  const clients = Store.getClients();
+  const topClients = clients.map((cl) => {
+    const cs = contracts.filter((c) => c.clientId === cl.id);
+    return { client: cl, count: cs.length, total: cs.reduce((s, c) => s + Number(c.value || 0), 0) };
+  }).filter((x) => x.count > 0).sort((a, b) => b.total - a.total).slice(0, 8);
+
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Báo cáo</h2><p class="muted">Thống kê doanh thu và hợp đồng</p></div>
+      <select id="report-year">${years.map((y) => `<option value="${y}" ${y === state.reportYear ? "selected" : ""}>${y}</option>`).join("")}</select>
+    </div>
+    <div class="stat-grid">
+      ${statCard("Tổng giá trị hợp đồng", formatCurrency(totalValue), "blue")}
+      ${statCard("Tổng đã thu", formatCurrency(totalPaid), "green")}
+      ${statCard("Giá trị TB / hợp đồng", formatCurrency(avgValue), "indigo")}
+      ${statCard("Tổng số hợp đồng", contracts.length, "teal")}
+    </div>
+    <div class="card">
+      <h3>Doanh thu theo tháng (${state.reportYear})</h3>
+      <canvas id="chart-report-revenue" height="240"></canvas>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Phân bổ trạng thái hợp đồng</h3>
+        <canvas id="chart-report-status" height="220"></canvas>
+      </div>
+      <div class="card">
+        <h3>Khách hàng theo giá trị</h3>
+        <table class="data-table">
+          <thead><tr><th>Khách hàng</th><th>Số HĐ</th><th>Tổng giá trị</th></tr></thead>
+          <tbody>${topClients.length ? topClients.map((x) => `<tr><td>${escapeHtml(x.client.name)}</td><td>${x.count}</td><td>${formatCurrency(x.total)}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">Chưa có dữ liệu</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  document.getElementById("report-year").addEventListener("change", (e) => { state.reportYear = Number(e.target.value); renderReports(); });
+  drawBarChart(document.getElementById("chart-report-revenue"), monthLabels(), monthlyRevenue(contracts, state.reportYear), { formatValue: (v) => (v / 1e6).toFixed(0) + "tr" });
+  drawDonutChart(document.getElementById("chart-report-status"), Object.entries(STATUS_CONTRACT).map(([key, meta]) => ({ label: meta.label, value: contracts.filter((c) => c.status === key).length, color: meta.color })));
+}
+
+/* ================= SETTINGS ================= */
+function renderSettings() {
+  const el = document.getElementById("view-settings");
+  const s = Store.getSettings();
+  el.innerHTML = `
+    <div class="page-header"><h2>Cài đặt</h2><p class="muted">Thông tin công ty và tùy chọn hệ thống</p></div>
+    <div class="card">
+      <h3>Thông tin công ty (hiển thị trên báo giá)</h3>
+      <form id="settings-form" class="form-grid">
+        <label>Tên công ty <input name="companyName" value="${escapeHtml(s.companyName)}" /></label>
+        <label>Mã số thuế <input name="companyTaxCode" value="${escapeHtml(s.companyTaxCode)}" /></label>
+        <label class="col-span-2">Địa chỉ <input name="companyAddress" value="${escapeHtml(s.companyAddress)}" /></label>
+        <label>Điện thoại <input name="companyPhone" value="${escapeHtml(s.companyPhone)}" /></label>
+        <label>Email <input type="email" name="companyEmail" value="${escapeHtml(s.companyEmail)}" /></label>
+        <label>Số ngày cảnh báo sắp hết hạn <input type="number" min="1" name="reminderDays" value="${s.reminderDays}" /></label>
+      </form>
+      <button class="btn btn-primary" id="settings-save" style="margin-top:12px">Lưu cài đặt</button>
+    </div>
+    <div class="card">
+      <h3>Dữ liệu</h3>
+      <p class="muted">Dữ liệu được lưu ngay trên trình duyệt này (localStorage). Hãy sao lưu định kỳ để tránh mất dữ liệu.</p>
+      <div class="row" style="gap:8px">
+        <button class="btn" id="btn-export">⬇ Xuất dữ liệu (JSON)</button>
+        <label class="btn" style="cursor:pointer">⬆ Nhập dữ liệu
+          <input type="file" id="btn-import" accept="application/json" style="display:none" />
+        </label>
+        <button class="btn danger" id="btn-clear">🗑 Xóa toàn bộ dữ liệu</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("settings-save").addEventListener("click", () => {
+    const form = document.getElementById("settings-form");
+    const payload = Object.fromEntries(new FormData(form).entries());
+    payload.reminderDays = Number(payload.reminderDays) || 30;
+    Store.saveSettings(payload);
+    alert("Đã lưu cài đặt.");
+  });
+
+  document.getElementById("btn-export").addEventListener("click", () => {
+    const data = Store.exportAll();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `hop-dong-tu-van-backup-${todayISO()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById("btn-import").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (confirm("Nhập dữ liệu sẽ ghi đè dữ liệu hiện tại. Tiếp tục?")) {
+          Store.importAll(data);
+          alert("Nhập dữ liệu thành công.");
+          renderCurrentView();
+        }
+      } catch (err) {
+        alert("File không hợp lệ.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  document.getElementById("btn-clear").addEventListener("click", () => {
+    if (confirm("Xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.")) {
+      Store.clearAll();
+      renderCurrentView();
+    }
+  });
+}
+
+/* ---------------- Init ---------------- */
+renderCurrentView();
+  </script>
+</body>
+</html>
