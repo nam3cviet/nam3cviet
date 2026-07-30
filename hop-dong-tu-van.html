@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Quản lý Hợp đồng Tư vấn</title>
+<title>TVV | Quản lý Hợp đồng Tư vấn</title>
 <style>
 :root {
   --navy: #0f172a;
@@ -68,7 +68,8 @@ html, body {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 11px;
+  letter-spacing: -0.02em;
   flex-shrink: 0;
 }
 
@@ -289,15 +290,19 @@ html, body {
 
 canvas { width: 100%; display: block; }
 
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lang-btn { padding: 14px; font-size: 14px; }
+.lang-btn:hover { border-color: var(--primary); color: var(--primary); }
+
 </style>
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        <span class="brand-mark">HĐ</span>
+        <span class="brand-mark">TVV</span>
         <div>
-          <div class="brand-title">Hợp Đồng Tư Vấn</div>
+          <div class="brand-title">TVV Hợp Đồng Tư Vấn</div>
           <div class="brand-sub">Quản lý chuyên nghiệp</div>
         </div>
       </div>
@@ -362,6 +367,595 @@ function escapeHtml(str = "") {
     '"': "&quot;",
     "'": "&#39;",
   }[c]));
+}
+
+const VI_DIGITS = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+const VI_UNITS = ["", "nghìn", "triệu", "tỷ"];
+
+function viThreeDigits(n, fullZero) {
+  const h = Math.floor(n / 100);
+  const t = Math.floor((n % 100) / 10);
+  const u = n % 10;
+  let out = "";
+  if (h > 0 || fullZero) out += `${VI_DIGITS[h]} trăm `;
+  if (t > 1) {
+    out += `${VI_DIGITS[t]} mươi `;
+    if (u === 1) out += "mốt ";
+    else if (u === 5) out += "lăm ";
+    else if (u > 0) out += `${VI_DIGITS[u]} `;
+  } else if (t === 1) {
+    out += "mười ";
+    if (u === 5) out += "lăm ";
+    else if (u > 0) out += `${VI_DIGITS[u]} `;
+  } else if (t === 0 && u > 0) {
+    if (h > 0 || fullZero) out += "lẻ ";
+    out += `${VI_DIGITS[u]} `;
+  }
+  return out.trim();
+}
+
+// Vietnamese amount-in-words, as required on official contracts/quotes.
+function numberToWordsVi(amount) {
+  const n = Math.round(Math.abs(Number(amount) || 0));
+  if (n === 0) return "Không đồng";
+  const groups = [];
+  let rest = n;
+  while (rest > 0) {
+    groups.unshift(rest % 1000);
+    rest = Math.floor(rest / 1000);
+  }
+  const parts = [];
+  groups.forEach((g, idx) => {
+    if (g === 0) return;
+    const unitIdx = groups.length - 1 - idx;
+    const fullZero = idx > 0;
+    parts.push(`${viThreeDigits(g, fullZero)} ${VI_UNITS[unitIdx] || ""}`.trim());
+  });
+  const words = parts.join(" ").replace(/\s+/g, " ").trim();
+  const capitalized = words.charAt(0).toUpperCase() + words.slice(1);
+  return `${capitalized} đồng`;
+}
+
+const EN_ONES = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+  "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+const EN_TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+const EN_UNITS = ["", "Thousand", "Million", "Billion"];
+
+function enThreeDigits(n) {
+  const h = Math.floor(n / 100);
+  const rest = n % 100;
+  let out = "";
+  if (h > 0) out += `${EN_ONES[h]} Hundred `;
+  if (rest >= 20) {
+    out += EN_TENS[Math.floor(rest / 10)];
+    if (rest % 10 > 0) out += `-${EN_ONES[rest % 10]}`;
+    out += " ";
+  } else if (rest > 0) {
+    out += `${EN_ONES[rest]} `;
+  }
+  return out.trim();
+}
+
+// English amount-in-words, used for the EN print template.
+function numberToWordsEn(amount) {
+  const n = Math.round(Math.abs(Number(amount) || 0));
+  if (n === 0) return "Zero dong";
+  const groups = [];
+  let rest = n;
+  while (rest > 0) {
+    groups.unshift(rest % 1000);
+    rest = Math.floor(rest / 1000);
+  }
+  const parts = [];
+  groups.forEach((g, idx) => {
+    if (g === 0) return;
+    const unitIdx = groups.length - 1 - idx;
+    parts.push(`${enThreeDigits(g)} ${EN_UNITS[unitIdx] || ""}`.trim());
+  });
+  return `${parts.join(" ").replace(/\s+/g, " ").trim()} dong`;
+}
+
+/* ===== i18n.js ===== */
+const LANGS = [
+  { code: "vi", name: "Tiếng Việt" },
+  { code: "en", name: "English" },
+  { code: "ko", name: "한국어" },
+  { code: "zh", name: "中文" },
+];
+
+const I18N = {
+  vi: {
+    companyFallback: "Công ty tư vấn",
+    numberLabel: "Số",
+    dateLabel: "Ngày",
+    taxCodeLabel: "MST",
+    phoneLabel: "Điện thoại",
+    addressLabel: "Địa chỉ",
+
+    quoteTitle: "BÁO GIÁ",
+    quoteGreeting: (name) => `Kính gửi: ${name}`,
+    quoteIntro: "Cảm ơn Quý khách đã quan tâm đến dịch vụ tư vấn của chúng tôi. Chúng tôi xin gửi báo giá chi tiết như sau:",
+    quoteClientInfoTitle: "THÔNG TIN KHÁCH HÀNG",
+    companyNameLabel: "Tên công ty",
+    employeeCountLabel: "Số lao động",
+    scopeLabel: "Phạm vi",
+    durationLabel: "Thời gian thực hiện dự kiến",
+    quotePriceTitle: "BÁO PHÍ",
+    colIndex: "STT",
+    colDesc: "Nội dung",
+    colUnit: "ĐVT",
+    colQty: "SL",
+    colUnitPrice: "Đơn giá",
+    colLineTotal: "Thành tiền",
+    subtotalLabel: "Tạm tính",
+    discountLabel: "Chiết khấu",
+    vatLabel: "Thuế GTGT",
+    totalLabel: "Tổng cộng",
+    vatIncludedNote: (pct) => `Chi phí trên đã bao gồm thuế GTGT (${pct}%).`,
+    vatExcludedNote: "Chi phí trên chưa bao gồm thuế GTGT.",
+    validUntilNote: (date) => `Báo giá có hiệu lực đến hết ngày ${date}.`,
+    paymentTitle: "THANH TOÁN",
+    paymentDefault: "Điều khoản thanh toán cụ thể sẽ theo thỏa thuận giữa hai bên khi ký hợp đồng chính thức.",
+    noteTitle: "Ghi chú",
+    confirmTitle: "XÁC NHẬN",
+    confirmedByLabel: "Xác nhận đồng ý báo giá",
+    preparedByLabel: "Người lập báo giá",
+    signPlaceholder: "(Ký, họ tên)",
+    quoteThanks: "Cảm ơn Quý khách đã tin tưởng và sử dụng dịch vụ của chúng tôi!",
+
+    contractDocTitle: "HỢP ĐỒNG DỊCH VỤ TƯ VẤN",
+    nationTitle: "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM",
+    motto: "Độc lập – Tự do – Hạnh phúc",
+    legalIntro: "Căn cứ:",
+    legalBasis: [
+      "Bộ luật Dân sự nước Cộng hòa Xã hội chủ nghĩa Việt Nam;",
+      "Luật Thương mại nước Cộng hòa Xã hội chủ nghĩa Việt Nam;",
+      "Nhu cầu và khả năng của hai bên.",
+    ],
+    todayLinePrefix: "Hôm nay, ngày",
+    todayLineSuffix: "hai bên chúng tôi gồm có:",
+    partyALabel: "BÊN A (Bên sử dụng dịch vụ)",
+    partyBLabel: "BÊN B (Bên cung cấp dịch vụ)",
+    representativeLabel: "Người đại diện",
+    positionLabel: "Chức danh",
+    agreementLine: "Hai bên thỏa thuận, thống nhất ký kết hợp đồng với các điều khoản sau đây:",
+
+    article1Title: "ĐIỀU 1: PHẠM VI CÔNG VIỆC VÀ ĐỊA ĐIỂM THỰC HIỆN",
+    article1Body: (name) => `Bên A đồng ý thuê và Bên B đồng ý cung cấp dịch vụ tư vấn cho Bên A với nội dung, phạm vi công việc như sau:`,
+    locationLabel: "Địa điểm thực hiện",
+
+    article2Title: "ĐIỀU 2: GIÁ TRỊ HỢP ĐỒNG",
+    colContent: "Nội dung",
+    colCost: "Chi phí (VNĐ)",
+    totalCostLabel: "Tổng giá trị hợp đồng",
+    inWordsLabel: "Bằng chữ",
+
+    article3Title: "ĐIỀU 3: ĐIỀU KHOẢN THANH TOÁN",
+    paymentMethodLine: "Phương thức thanh toán: chuyển khoản ngân hàng, Bên A chịu phí chuyển khoản (nếu có).",
+    accountNameLabel: "Chủ tài khoản",
+    accountNumberLabel: "Số tài khoản",
+    bankLabel: "Tại ngân hàng",
+    currencyLabel: "Đồng tiền thanh toán",
+    currencyValue: "Việt Nam đồng (VNĐ)",
+    scheduleLabel: "Lịch thanh toán",
+    installmentLine: (n, amount, date) => `Đợt ${n}: ${amount}${date ? ` — hạn thanh toán ngày ${date}` : ""}.`,
+    noScheduleNote: "Thanh toán 100% giá trị hợp đồng sau khi hai bên ký kết và Bên B hoàn thành công việc, trừ khi hai bên có thỏa thuận khác bằng văn bản.",
+    invoiceLine: "Bên B xuất hóa đơn cho Bên A khi hai bên nghiệm thu, thanh toán hoàn thành công việc.",
+
+    article4Title: "ĐIỀU 4: TRÁCH NHIỆM CỦA CÁC BÊN",
+    respATitle: "Trách nhiệm của Bên A",
+    respA: [
+      "Thanh toán giá trị hợp đồng cho Bên B theo quy định tại Điều 2 và Điều 3.",
+      "Cung cấp đầy đủ thông tin, tài liệu, nguồn lực (nhân sự, thời gian, phương tiện làm việc) cần thiết để Bên B thực hiện công việc tư vấn.",
+      "Phối hợp, thực hiện theo hướng dẫn, đề xuất của Bên B trong quá trình triển khai.",
+      "Hỗ trợ Bên B giải quyết các vấn đề phát sinh trong quá trình thực hiện hợp đồng (nếu có).",
+    ],
+    respBTitle: "Trách nhiệm của Bên B",
+    respB: [
+      "Bố trí nhân sự có chuyên môn phù hợp để thực hiện công việc tư vấn theo đúng phạm vi tại Điều 1.",
+      "Cung cấp tài liệu, báo cáo, kết quả tư vấn theo tiến độ đã thống nhất với Bên A.",
+      "Đảm bảo chất lượng, tiến độ công việc tư vấn theo đúng cam kết trong hợp đồng.",
+      "Hỗ trợ, phối hợp với Bên A giải quyết các vấn đề phát sinh trong quá trình thực hiện (nếu có).",
+    ],
+
+    article5Title: "ĐIỀU 5: NGHIỆM THU CÔNG VIỆC",
+    article5Body: [
+      "Hai bên tiến hành nghiệm thu, xác nhận hoàn thành công việc sau khi Bên B hoàn thành các nội dung tư vấn nêu tại Điều 1 của hợp đồng.",
+      "Các công việc phát sinh ngoài phạm vi tại Điều 1 (nếu có) sẽ được hai bên thống nhất và bổ sung bằng Phụ lục hợp đồng.",
+    ],
+
+    article6Title: "ĐIỀU 6: TẠM DỪNG, THAY ĐỔI, HỦY HỢP ĐỒNG",
+    article6a: "a) Tạm dừng hợp đồng: Hợp đồng có thể tạm dừng nếu một trong hai bên vi phạm các điều khoản đã thỏa thuận. Việc thực hiện hợp đồng chỉ được tiếp tục sau khi bên vi phạm đã khắc phục và thanh toán đầy đủ các chi phí phát sinh (nếu có).",
+    article6b: "b) Thay đổi nội dung hợp đồng: Mọi thay đổi phải được thông báo bằng văn bản cho bên còn lại trước ít nhất 07 (bảy) ngày làm việc. Chi phí phát sinh do thay đổi thuộc trách nhiệm của bên đề nghị thay đổi. Công việc phát sinh ngoài phạm vi hợp đồng sẽ được bổ sung bằng Phụ lục hợp đồng.",
+    article6c: "c) Hủy hợp đồng: Một bên có quyền hủy hợp đồng nếu bên còn lại vi phạm nghiêm trọng các điều khoản đã thỏa thuận và phải thông báo ngay cho bên kia; nếu không thông báo mà gây thiệt hại thì phải bồi thường. Khi hợp đồng bị hủy, hai bên hoàn trả cho nhau những gì đã nhận; nếu không hoàn trả được bằng hiện vật thì hoàn trả bằng tiền. Giá trị bồi thường không vượt quá giá trị phần công việc đã thực hiện tính đến thời điểm hủy hợp đồng.",
+
+    article7Title: "ĐIỀU 7: ĐIỀU KHOẢN BẢO MẬT",
+    article7Body: "Hai bên cam kết bảo mật tuyệt đối nội dung của hợp đồng này và mọi thông tin, tài liệu trao đổi trong quá trình thực hiện, không tiết lộ cho bên thứ ba khi chưa có sự đồng ý bằng văn bản của bên còn lại, trừ trường hợp pháp luật có quy định khác.",
+
+    article8Title: "ĐIỀU 8: CAM KẾT CHUNG",
+    article8Body: [
+      "Hai bên cam kết thực hiện đầy đủ các điều khoản của hợp đồng này. Những nội dung không được quy định tại hợp đồng sẽ thực hiện theo quy định pháp luật hiện hành của Việt Nam.",
+      "Trong quá trình thực hiện, nếu phát sinh vướng mắc, hai bên cùng bàn bạc giải quyết trên tinh thần hợp tác, thiện chí. Trường hợp không thể tự giải quyết, tranh chấp sẽ được đưa ra giải quyết tại Tòa án nhân dân có thẩm quyền.",
+      "Hợp đồng có hiệu lực kể từ ngày hai bên ký kết và tự động thanh lý khi hai bên đã hoàn thành đầy đủ nghĩa vụ, trách nhiệm quy định trong hợp đồng, không cần lập biên bản thanh lý riêng, trừ khi một bên có yêu cầu bằng văn bản.",
+      "Hợp đồng được lập thành 02 (hai) bản có giá trị pháp lý như nhau, mỗi bên giữ 01 (một) bản.",
+    ],
+
+    sigA: "ĐẠI DIỆN BÊN A",
+    sigB: "ĐẠI DIỆN BÊN B",
+    sigNote: "(Ký, họ tên, đóng dấu)",
+    translationDisclaimer: "Đây là bản dịch tham khảo. Bản tiếng Việt là bản có giá trị pháp lý chính thức.",
+  },
+
+  en: {
+    companyFallback: "Consulting Company",
+    numberLabel: "No.",
+    dateLabel: "Date",
+    taxCodeLabel: "Tax code",
+    phoneLabel: "Phone",
+    addressLabel: "Address",
+
+    quoteTitle: "QUOTATION",
+    quoteGreeting: (name) => `Dear: ${name}`,
+    quoteIntro: "Thank you for your interest in our consulting services. Please find our detailed quotation below:",
+    quoteClientInfoTitle: "CLIENT INFORMATION",
+    companyNameLabel: "Company name",
+    employeeCountLabel: "Number of employees",
+    scopeLabel: "Scope",
+    durationLabel: "Estimated duration",
+    quotePriceTitle: "QUOTATION",
+    colIndex: "No.",
+    colDesc: "Description",
+    colUnit: "Unit",
+    colQty: "Qty",
+    colUnitPrice: "Unit price",
+    colLineTotal: "Amount",
+    subtotalLabel: "Subtotal",
+    discountLabel: "Discount",
+    vatLabel: "VAT",
+    totalLabel: "Total",
+    vatIncludedNote: (pct) => `The above cost includes VAT (${pct}%).`,
+    vatExcludedNote: "The above cost does not include VAT.",
+    validUntilNote: (date) => `This quotation is valid until ${date}.`,
+    paymentTitle: "PAYMENT",
+    paymentDefault: "Detailed payment terms will be agreed upon when the official contract is signed.",
+    noteTitle: "Note",
+    confirmTitle: "CONFIRMATION",
+    confirmedByLabel: "Confirmed by (Client)",
+    preparedByLabel: "Prepared by",
+    signPlaceholder: "(Signature, full name)",
+    quoteThanks: "Thank you for your trust and for using our services!",
+
+    contractDocTitle: "CONSULTING SERVICE CONTRACT",
+    nationTitle: "SOCIALIST REPUBLIC OF VIETNAM",
+    motto: "Independence – Freedom – Happiness",
+    legalIntro: "Pursuant to:",
+    legalBasis: [
+      "The Civil Code of the Socialist Republic of Vietnam;",
+      "The Commercial Law of the Socialist Republic of Vietnam;",
+      "The needs and capabilities of both parties.",
+    ],
+    todayLinePrefix: "Today,",
+    todayLineSuffix: "the two parties are:",
+    partyALabel: "PARTY A (Service User)",
+    partyBLabel: "PARTY B (Service Provider)",
+    representativeLabel: "Representative",
+    positionLabel: "Position",
+    agreementLine: "The two parties agree to enter into this contract with the following terms:",
+
+    article1Title: "ARTICLE 1: SCOPE OF WORK AND LOCATION",
+    article1Body: () => "Party A agrees to engage, and Party B agrees to provide, consulting services to Party A with the following scope of work:",
+    locationLabel: "Place of performance",
+
+    article2Title: "ARTICLE 2: CONTRACT VALUE",
+    colContent: "Description",
+    colCost: "Cost (VND)",
+    totalCostLabel: "Total contract value",
+    inWordsLabel: "In words",
+
+    article3Title: "ARTICLE 3: PAYMENT TERMS",
+    paymentMethodLine: "Payment method: bank transfer; Party A bears the bank transfer fee (if any).",
+    accountNameLabel: "Account name",
+    accountNumberLabel: "Account number",
+    bankLabel: "Bank",
+    currencyLabel: "Payment currency",
+    currencyValue: "Vietnamese Dong (VND)",
+    scheduleLabel: "Payment schedule",
+    installmentLine: (n, amount, date) => `Installment ${n}: ${amount}${date ? ` — due on ${date}` : ""}.`,
+    noScheduleNote: "100% of the contract value shall be paid after both parties sign the contract and Party B completes the work, unless otherwise agreed in writing.",
+    invoiceLine: "Party B shall issue an invoice to Party A upon acceptance and payment for the completed work.",
+
+    article4Title: "ARTICLE 4: RESPONSIBILITIES OF THE PARTIES",
+    respATitle: "Responsibilities of Party A",
+    respA: [
+      "Pay the contract value to Party B as specified in Articles 2 and 3.",
+      "Provide sufficient information, documents, and resources (personnel, time, working facilities) necessary for Party B to perform the consulting work.",
+      "Cooperate and follow Party B's guidance and recommendations during implementation.",
+      "Support Party B in resolving any issues arising during the performance of the contract (if any).",
+    ],
+    respBTitle: "Responsibilities of Party B",
+    respB: [
+      "Assign appropriately qualified personnel to perform the consulting work within the scope stated in Article 1.",
+      "Provide documents, reports, and consulting results according to the schedule agreed with Party A.",
+      "Ensure the quality and progress of the consulting work as committed in the contract.",
+      "Support and cooperate with Party A to resolve issues arising during implementation (if any).",
+    ],
+
+    article5Title: "ARTICLE 5: ACCEPTANCE OF WORK",
+    article5Body: [
+      "The two parties shall carry out acceptance and confirm completion of the work after Party B completes the consulting content stated in Article 1 of the contract.",
+      "Any work arising outside the scope of Article 1 (if any) shall be agreed upon and added via a contract appendix.",
+    ],
+
+    article6Title: "ARTICLE 6: SUSPENSION, AMENDMENT, TERMINATION",
+    article6a: "a) Suspension: The contract may be suspended if either party breaches the agreed terms. Performance shall resume only after the breaching party remedies the breach and pays any related costs in full (if any).",
+    article6b: "b) Amendment: Any amendment must be notified in writing to the other party at least 07 (seven) working days in advance. Costs arising from an amendment shall be borne by the party requesting it. Work arising outside the contract scope shall be added via a contract appendix.",
+    article6c: "c) Termination: Either party may terminate the contract if the other party seriously breaches the agreed terms, and must promptly notify the other party; failure to notify, causing damage, shall require compensation. Upon termination, the parties shall return to each other what has been received; if this is not possible in kind, it shall be returned in cash. Compensation shall not exceed the value of the work completed up to the time of termination.",
+
+    article7Title: "ARTICLE 7: CONFIDENTIALITY",
+    article7Body: "Both parties undertake to keep the content of this contract and all information and documents exchanged during its performance strictly confidential, and shall not disclose them to any third party without the other party's prior written consent, except as otherwise required by law.",
+
+    article8Title: "ARTICLE 8: GENERAL COMMITMENTS",
+    article8Body: [
+      "Both parties commit to fully perform the terms of this contract. Matters not provided for in this contract shall be governed by the applicable laws of Vietnam.",
+      "During performance, any issues arising shall be resolved through discussion in a spirit of cooperation and good faith. If the parties cannot resolve a dispute themselves, it shall be settled at the competent People's Court.",
+      "This contract takes effect from the date of signing by both parties and is automatically liquidated once both parties have fully performed their obligations under the contract, without the need for a separate liquidation record, unless either party requests one in writing.",
+      "This contract is made in 02 (two) copies of equal legal validity, with each party retaining 01 (one) copy.",
+    ],
+
+    sigA: "FOR PARTY A",
+    sigB: "FOR PARTY B",
+    sigNote: "(Signature, full name, seal)",
+    translationDisclaimer: "This is a reference translation. The Vietnamese version is the officially binding text.",
+  },
+
+  ko: {
+    companyFallback: "컨설팅 회사",
+    numberLabel: "번호",
+    dateLabel: "날짜",
+    taxCodeLabel: "사업자등록번호",
+    phoneLabel: "전화",
+    addressLabel: "주소",
+
+    quoteTitle: "견적서",
+    quoteGreeting: (name) => `수신: ${name}`,
+    quoteIntro: "저희 컨설팅 서비스에 관심을 가져 주셔서 감사합니다. 아래와 같이 상세 견적을 안내드립니다:",
+    quoteClientInfoTitle: "고객 정보",
+    companyNameLabel: "회사명",
+    employeeCountLabel: "직원 수",
+    scopeLabel: "범위",
+    durationLabel: "예상 수행 기간",
+    quotePriceTitle: "견적 내역",
+    colIndex: "번호",
+    colDesc: "내용",
+    colUnit: "단위",
+    colQty: "수량",
+    colUnitPrice: "단가",
+    colLineTotal: "금액",
+    subtotalLabel: "소계",
+    discountLabel: "할인",
+    vatLabel: "부가세",
+    totalLabel: "합계",
+    vatIncludedNote: (pct) => `위 비용은 부가가치세(${pct}%)가 포함된 금액입니다.`,
+    vatExcludedNote: "위 비용은 부가가치세가 포함되지 않은 금액입니다.",
+    validUntilNote: (date) => `본 견적서의 유효기간은 ${date}까지입니다.`,
+    paymentTitle: "결제 조건",
+    paymentDefault: "구체적인 결제 조건은 정식 계약 체결 시 양 당사자 간 협의하여 결정합니다.",
+    noteTitle: "비고",
+    confirmTitle: "확인",
+    confirmedByLabel: "견적 승인 확인 (고객)",
+    preparedByLabel: "작성자",
+    signPlaceholder: "(서명, 성명)",
+    quoteThanks: "저희 서비스를 신뢰하고 이용해 주셔서 감사합니다!",
+
+    contractDocTitle: "컨설팅 서비스 계약서",
+    nationTitle: "베트남 사회주의 공화국",
+    motto: "독립 – 자유 – 행복",
+    legalIntro: "다음 근거에 의거하여:",
+    legalBasis: [
+      "베트남 사회주의 공화국 민법;",
+      "베트남 사회주의 공화국 상법;",
+      "양 당사자의 필요 및 역량.",
+    ],
+    todayLinePrefix: "오늘,",
+    todayLineSuffix: "양 당사자는 다음과 같습니다:",
+    partyALabel: "갑 (서비스 이용자)",
+    partyBLabel: "을 (서비스 제공자)",
+    representativeLabel: "대표자",
+    positionLabel: "직위",
+    agreementLine: "양 당사자는 다음 조항에 따라 본 계약을 체결하기로 합의한다:",
+
+    article1Title: "제1조: 업무 범위 및 수행 장소",
+    article1Body: () => "갑은 을에게 컨설팅 서비스를 의뢰하고, 을은 다음과 같은 범위의 업무를 갑에게 제공하기로 합의한다:",
+    locationLabel: "수행 장소",
+
+    article2Title: "제2조: 계약 금액",
+    colContent: "내용",
+    colCost: "비용 (VND)",
+    totalCostLabel: "총 계약 금액",
+    inWordsLabel: "금액(문자)",
+
+    article3Title: "제3조: 결제 조건",
+    paymentMethodLine: "결제 방법: 계좌이체. 이체 수수료(있는 경우)는 갑이 부담한다.",
+    accountNameLabel: "예금주",
+    accountNumberLabel: "계좌번호",
+    bankLabel: "은행",
+    currencyLabel: "결제 통화",
+    currencyValue: "베트남 동 (VND)",
+    scheduleLabel: "결제 일정",
+    installmentLine: (n, amount, date) => `${n}차: ${amount}${date ? ` — 결제기한 ${date}` : ""}.`,
+    noScheduleNote: "별도의 서면 합의가 없는 한, 양 당사자 계약 체결 및 을의 업무 완료 후 계약금액의 100%를 결제한다.",
+    invoiceLine: "을은 업무 완료 검수 및 결제 시 갑에게 세금계산서를 발행한다.",
+
+    article4Title: "제4조: 양 당사자의 책임",
+    respATitle: "갑의 책임",
+    respA: [
+      "제2조 및 제3조에 따라 을에게 계약 금액을 지급한다.",
+      "을이 컨설팅 업무를 수행하는 데 필요한 정보, 자료, 인력·시간·업무 공간 등의 자원을 충분히 제공한다.",
+      "수행 과정에서 을의 안내 및 제안에 협조하고 이를 이행한다.",
+      "계약 이행 중 발생하는 문제(있는 경우) 해결을 위해 을을 지원한다.",
+    ],
+    respBTitle: "을의 책임",
+    respB: [
+      "제1조에 명시된 범위 내에서 업무를 수행할 적합한 전문 인력을 배치한다.",
+      "갑과 합의된 일정에 따라 자료, 보고서, 컨설팅 결과물을 제공한다.",
+      "계약에서 약속한 품질과 일정을 준수하여 업무를 수행한다.",
+      "수행 과정에서 발생하는 문제(있는 경우) 해결을 위해 갑과 협력한다.",
+    ],
+
+    article5Title: "제5조: 업무 검수",
+    article5Body: [
+      "을이 본 계약 제1조에 명시된 컨설팅 내용을 완료한 후, 양 당사자는 업무 완료를 검수·확인한다.",
+      "제1조 범위 외의 추가 업무(있는 경우)는 양 당사자 협의 후 계약 부속서로 추가한다.",
+    ],
+
+    article6Title: "제6조: 계약의 중지·변경·해지",
+    article6a: "a) 계약 중지: 일방이 합의된 조항을 위반할 경우 계약은 중지될 수 있다. 위반 당사자가 위반 사항을 시정하고 관련 비용(있는 경우)을 전액 지급한 후에만 계약 이행이 재개된다.",
+    article6b: "b) 계약 내용 변경: 모든 변경 사항은 최소 7(칠) 영업일 전에 서면으로 상대방에게 통지해야 한다. 변경으로 인해 발생하는 비용은 변경을 요청한 당사자가 부담한다. 계약 범위를 벗어나는 추가 업무는 계약 부속서로 추가한다.",
+    article6c: "c) 계약 해지: 상대방이 합의된 조항을 중대하게 위반할 경우 일방은 계약을 해지할 수 있으며, 즉시 상대방에게 통지해야 한다. 통지하지 않아 손해가 발생한 경우 배상 책임을 진다. 계약 해지 시 양 당사자는 수령한 것을 서로 반환하며, 현물로 반환할 수 없는 경우 금전으로 반환한다. 배상 금액은 해지 시점까지 완료된 업무 가치를 초과할 수 없다.",
+
+    article7Title: "제7조: 비밀유지 조항",
+    article7Body: "양 당사자는 본 계약의 내용 및 이행 과정에서 교환된 모든 정보와 자료를 철저히 비밀로 유지하며, 법률에 달리 정함이 없는 한 상대방의 사전 서면 동의 없이 제3자에게 공개하지 않는다.",
+
+    article8Title: "제8조: 공통 약정 사항",
+    article8Body: [
+      "양 당사자는 본 계약의 조항을 성실히 이행할 것을 약속한다. 본 계약에 명시되지 않은 사항은 베트남 현행 법률에 따른다.",
+      "이행 과정에서 문제가 발생할 경우 양 당사자는 협력과 신의성실의 정신으로 협의하여 해결한다. 자체적으로 해결할 수 없는 분쟁은 관할 인민법원에서 해결한다.",
+      "본 계약은 양 당사자 서명일로부터 효력이 발생하며, 양 당사자가 계약상 의무와 책임을 모두 이행하면 별도의 청산서 작성 없이 자동으로 종료된다. 단, 일방이 서면으로 요청하는 경우는 예외로 한다.",
+      "본 계약은 동일한 법적 효력을 가지는 2(이)부로 작성하며, 양 당사자가 각 1(일)부씩 보관한다.",
+    ],
+
+    sigA: "갑 대표",
+    sigB: "을 대표",
+    sigNote: "(서명, 성명, 직인)",
+    translationDisclaimer: "본 번역본은 참고용입니다. 베트남어 원본이 공식적으로 법적 효력을 가집니다.",
+  },
+
+  zh: {
+    companyFallback: "咨询公司",
+    numberLabel: "编号",
+    dateLabel: "日期",
+    taxCodeLabel: "税号",
+    phoneLabel: "电话",
+    addressLabel: "地址",
+
+    quoteTitle: "报价单",
+    quoteGreeting: (name) => `致：${name}`,
+    quoteIntro: "感谢贵司对我们咨询服务的关注，详细报价如下：",
+    quoteClientInfoTitle: "客户信息",
+    companyNameLabel: "公司名称",
+    employeeCountLabel: "员工人数",
+    scopeLabel: "服务范围",
+    durationLabel: "预计执行时间",
+    quotePriceTitle: "报价明细",
+    colIndex: "序号",
+    colDesc: "内容",
+    colUnit: "单位",
+    colQty: "数量",
+    colUnitPrice: "单价",
+    colLineTotal: "金额",
+    subtotalLabel: "小计",
+    discountLabel: "折扣",
+    vatLabel: "增值税",
+    totalLabel: "总计",
+    vatIncludedNote: (pct) => `以上费用已含增值税（${pct}%）。`,
+    vatExcludedNote: "以上费用不含增值税。",
+    validUntilNote: (date) => `本报价单有效期至 ${date}。`,
+    paymentTitle: "付款方式",
+    paymentDefault: "具体付款条款将在正式签订合同时由双方协商确定。",
+    noteTitle: "备注",
+    confirmTitle: "确认",
+    confirmedByLabel: "客户确认",
+    preparedByLabel: "制表人",
+    signPlaceholder: "（签名、姓名）",
+    quoteThanks: "感谢贵司的信任与支持！",
+
+    contractDocTitle: "咨询服务合同",
+    nationTitle: "越南社会主义共和国",
+    motto: "独立 – 自由 – 幸福",
+    legalIntro: "依据：",
+    legalBasis: [
+      "越南社会主义共和国《民法典》；",
+      "越南社会主义共和国《商法》；",
+      "双方的需求与能力。",
+    ],
+    todayLinePrefix: "今天，",
+    todayLineSuffix: "双方如下：",
+    partyALabel: "甲方（服务使用方）",
+    partyBLabel: "乙方（服务提供方）",
+    representativeLabel: "代表人",
+    positionLabel: "职务",
+    agreementLine: "双方协商一致，同意签订本合同，条款如下：",
+
+    article1Title: "第一条：工作范围及执行地点",
+    article1Body: () => "甲方同意委托、乙方同意为甲方提供咨询服务，具体工作范围如下：",
+    locationLabel: "执行地点",
+
+    article2Title: "第二条：合同金额",
+    colContent: "内容",
+    colCost: "费用（越南盾）",
+    totalCostLabel: "合同总金额",
+    inWordsLabel: "大写金额",
+
+    article3Title: "第三条：付款条款",
+    paymentMethodLine: "付款方式：银行转账，转账手续费（如有）由甲方承担。",
+    accountNameLabel: "账户名称",
+    accountNumberLabel: "账号",
+    bankLabel: "开户银行",
+    currencyLabel: "付款币种",
+    currencyValue: "越南盾 (VND)",
+    scheduleLabel: "付款计划",
+    installmentLine: (n, amount, date) => `第${n}期：${amount}${date ? `，付款期限 ${date}` : ""}。`,
+    noScheduleNote: "除双方另有书面约定外，应在双方签订合同且乙方完成工作后，一次性支付合同金额的100%。",
+    invoiceLine: "乙方应在双方验收并完成付款时向甲方开具发票。",
+
+    article4Title: "第四条：双方责任",
+    respATitle: "甲方责任",
+    respA: [
+      "按第二条、第三条规定向乙方支付合同款项。",
+      "提供乙方开展咨询工作所需的充分信息、资料及资源（人员、时间、办公条件等）。",
+      "在实施过程中配合并执行乙方的指导与建议。",
+      "协助乙方解决合同履行过程中出现的问题（如有）。",
+    ],
+    respBTitle: "乙方责任",
+    respB: [
+      "安排具备相应专业能力的人员，按第一条范围开展咨询工作。",
+      "按与甲方商定的进度提供资料、报告及咨询成果。",
+      "按合同承诺保证咨询工作的质量与进度。",
+      "配合甲方解决实施过程中出现的问题（如有）。",
+    ],
+
+    article5Title: "第五条：工作验收",
+    article5Body: [
+      "乙方完成本合同第一条所述咨询内容后，双方进行验收并确认工作完成。",
+      "超出第一条范围的新增工作（如有），由双方协商一致后以合同附件形式补充。",
+    ],
+
+    article6Title: "第六条：合同的暂停、变更与终止",
+    article6a: "a) 合同暂停：若一方违反约定条款，合同可暂停执行；违约方纠正违约行为并足额支付相关费用（如有）后，方可恢复履行。",
+    article6b: "b) 合同变更：任何变更须至少提前7（七）个工作日以书面形式通知对方。因变更产生的费用由提出变更的一方承担。超出合同范围的新增工作以合同附件形式补充。",
+    article6c: "c) 合同终止：若对方严重违反约定条款，一方有权终止合同，并须立即通知对方；未通知而造成损失的，须承担赔偿责任。合同终止后，双方应相互返还已收取的款项或财物；无法以实物返还的，以现金折算返还。赔偿金额不超过终止时已完成工作的价值。",
+
+    article7Title: "第七条：保密条款",
+    article7Body: "双方承诺对本合同内容及履行过程中交换的所有信息、资料严格保密，未经对方书面同意不得向任何第三方披露，法律另有规定的除外。",
+
+    article8Title: "第八条：共同承诺",
+    article8Body: [
+      "双方承诺全面履行本合同各项条款。本合同未尽事宜，按越南现行法律规定执行。",
+      "履行过程中如有问题，双方本着合作与诚信精神协商解决；无法协商解决的争议，提交有管辖权的人民法院解决。",
+      "本合同自双方签署之日起生效，双方全面履行合同规定的义务和责任后自动清算终止，无需另行签署清算文件，但一方书面要求的除外。",
+      "本合同一式2（贰）份，具有同等法律效力，双方各执1（壹）份。",
+    ],
+
+    sigA: "甲方代表",
+    sigB: "乙方代表",
+    sigNote: "（签名、姓名、盖章）",
+    translationDisclaimer: "本译文仅供参考，越南语版本为具有正式法律效力的文本。",
+  },
+};
+
+function t(lang, key) {
+  const dict = I18N[lang] || I18N.vi;
+  return dict[key] !== undefined ? dict[key] : I18N.vi[key];
 }
 
 /* ===== charts.js ===== */
@@ -509,6 +1103,11 @@ const defaultSettings = {
   companyPhone: "0966 863 672 / 0842 001 236",
   companyEmail: "sales@vietconsulting.org",
   companyTaxCode: "0109499676",
+  repName: "Lê Thị Thắm",
+  repTitle: "Giám đốc",
+  bankAccountName: "CÔNG TY TNHH DỊCH VỤ TƯ VẤN DOANH NGHIỆP VIỆT",
+  bankAccountNumber: "510108386",
+  bankName: "MB Bank – Ngân hàng Quân đội – chi nhánh Thanh Xuân",
   reminderDays: 30,
 };
 
@@ -696,6 +1295,27 @@ function openModal({ title, bodyHtml, footerHtml = "", onMount, wide = false }) 
   if (onMount) onMount(modalRoot.querySelector(".modal-dialog"));
 }
 
+/* ---------------- Language picker ---------------- */
+function pickLanguageThen(onPick) {
+  openModal({
+    title: "Chọn ngôn ngữ in / Select print language",
+    bodyHtml: `
+      <div class="lang-grid">
+        ${LANGS.map((l) => `<button type="button" class="btn lang-btn" data-lang="${l.code}">${l.name}</button>`).join("")}
+      </div>
+      <p class="hint" style="margin-top:12px">Nội dung do bạn tự nhập (mô tả, ghi chú...) sẽ giữ nguyên ngôn ngữ đã nhập; chỉ nhãn/điều khoản chuẩn được dịch.</p>
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button>`,
+    onMount: () => {
+      modalRoot.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => {
+        const lang = b.dataset.lang;
+        closeModal();
+        onPick(lang);
+      }));
+    },
+  });
+}
+
 /* ---------------- Shared helpers ---------------- */
 function clientOptions(selectedId) {
   const clients = Store.getClients().slice().sort((a, b) => a.name.localeCompare(b.name, "vi"));
@@ -872,6 +1492,7 @@ function renderContractsTable() {
       <td>${formatCurrency(paid)} / <span class="muted">${formatCurrency(remain)}</span></td>
       <td class="actions">
         <button class="icon-btn" data-view-id="${c.id}" title="Xem chi tiết">👁</button>
+        <button class="icon-btn" data-print-id="${c.id}" title="In hợp đồng">🖨</button>
         <button class="icon-btn" data-edit-id="${c.id}" title="Sửa">✎</button>
         <button class="icon-btn danger" data-del-id="${c.id}" title="Xóa">🗑</button>
       </td>
@@ -879,6 +1500,7 @@ function renderContractsTable() {
   }).join("");
 
   tbody.querySelectorAll("[data-view-id]").forEach((b) => b.addEventListener("click", () => openContractDetail(b.dataset.viewId)));
+  tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => pickLanguageThen((lang) => printContract(b.dataset.printId, lang))));
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openContractForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
     if (confirm("Xóa hợp đồng này? Hành động không thể hoàn tác.")) { Store.deleteContract(b.dataset.delId); renderContractsTable(); }
@@ -901,6 +1523,9 @@ function openContractForm(id, prefill, onSaved) {
         </label>
         <label class="col-span-2">Mô tả / phạm vi công việc
           <textarea name="description" rows="2">${escapeHtml(data.description || "")}</textarea>
+        </label>
+        <label class="col-span-2">Địa điểm thực hiện (tùy chọn)
+          <input name="location" value="${escapeHtml(data.location || "")}" placeholder="Để trống nếu thực hiện tại địa chỉ khách hàng" />
         </label>
         <label>Ngày ký
           <input type="date" name="signDate" value="${data.signDate || todayISO()}" />
@@ -975,10 +1600,11 @@ function openContractDetail(id) {
         <tbody id="payments-tbody"></tbody>
       </table></div>
     `,
-    footerHtml: `<button class="btn" data-close>Đóng</button>`,
+    footerHtml: `<button class="btn" data-close>Đóng</button><button class="btn btn-primary" id="btn-print-contract">🖨 In hợp đồng</button>`,
     onMount: () => {
       renderPaymentsTbody(c.id);
       document.getElementById("btn-add-payment").addEventListener("click", () => openPaymentForm(c.id));
+      document.getElementById("btn-print-contract").addEventListener("click", () => pickLanguageThen((lang) => printContract(c.id, lang)));
     },
   });
 }
@@ -1139,8 +1765,17 @@ function openClientForm(id) {
         <label>Mã số thuế
           <input name="taxCode" value="${escapeHtml(data.taxCode || "")}" />
         </label>
+        <label>Số lao động (nếu có)
+          <input type="number" min="0" name="employeeCount" value="${escapeHtml(data.employeeCount || "")}" />
+        </label>
         <label class="col-span-2">Địa chỉ
           <input name="address" value="${escapeHtml(data.address || "")}" />
+        </label>
+        <label>Người đại diện (dùng khi lập hợp đồng)
+          <input name="repName" value="${escapeHtml(data.repName || "")}" placeholder="VD: Ông Nguyễn Văn A" />
+        </label>
+        <label>Chức danh người đại diện
+          <input name="repTitle" value="${escapeHtml(data.repTitle || "")}" placeholder="VD: Giám đốc" />
         </label>
         <label class="col-span-2">Ghi chú
           <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
@@ -1223,7 +1858,7 @@ function renderQuotesTable() {
     </tr>`;
   }).join("");
 
-  tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => printQuote(b.dataset.printId)));
+  tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => pickLanguageThen((lang) => printQuote(b.dataset.printId, lang))));
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openQuoteForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-convert-id]").forEach((b) => b.addEventListener("click", () => convertQuoteToContract(b.dataset.convertId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
@@ -1252,6 +1887,12 @@ function openQuoteForm(id) {
         <label>Hiệu lực đến
           <input type="date" name="validUntil" value="${data.validUntil || ""}" />
         </label>
+        <label>Phạm vi (tùy chọn)
+          <input name="scope" value="${escapeHtml(data.scope || "")}" placeholder="VD: Tư vấn trọn gói" />
+        </label>
+        <label>Thời gian thực hiện dự kiến (tùy chọn)
+          <input name="duration" value="${escapeHtml(data.duration || "")}" placeholder="VD: 1 tháng" />
+        </label>
         <div class="col-span-2">
           <div class="row" style="align-items:center;"><h4 style="margin:8px 0">Hạng mục dịch vụ</h4><button type="button" class="btn btn-sm" id="btn-add-item">+ Thêm dòng</button></div>
           <div class="table-wrap"><table class="data-table">
@@ -1266,6 +1907,9 @@ function openQuoteForm(id) {
           <input type="number" name="taxPct" min="0" max="100" value="${data.taxPct ?? 10}" />
         </label>
         <div class="col-span-2" id="quote-total-line"></div>
+        <label class="col-span-2">Điều khoản thanh toán (tùy chọn)
+          <textarea name="paymentTerms" rows="2" placeholder="VD: Thanh toán 50% khi ký hợp đồng, 50% còn lại khi nghiệm thu.">${escapeHtml(data.paymentTerms || "")}</textarea>
+        </label>
         <label class="col-span-2">Ghi chú
           <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
         </label>
@@ -1362,62 +2006,234 @@ function convertQuoteToContract(id) {
   });
 }
 
-function printQuote(id) {
+function printDocWindow(title, innerHtml) {
+  const win = window.open("", "_blank", "width=900,height=1000");
+  if (!win) { alert("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup."); return null; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:32px;max-width:800px;margin:auto;line-height:1.5;}
+      h1{font-size:20px;margin:0;}
+      h2{font-size:14.5px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.02em;border-bottom:1px solid #cbd5e1;padding-bottom:4px;}
+      .muted{color:#64748b;}
+      table{width:100%;border-collapse:collapse;margin-top:10px;}
+      th,td{border:1px solid #cbd5e1;padding:8px;font-size:12.5px;text-align:left;vertical-align:top;}
+      th{background:#f1f5f9;}
+      .right{text-align:right;}
+      .center{text-align:center;}
+      .totals{width:300px;margin-left:auto;margin-top:12px;}
+      .totals div{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;}
+      .grand{font-weight:bold;border-top:1px solid #334155;margin-top:4px;padding-top:8px !important;font-size:14.5px;}
+      .header{display:flex;justify-content:space-between;border-bottom:2px solid #1e293b;padding-bottom:12px;margin-bottom:16px;}
+      .info-line{margin:2px 0;font-size:12.5px;}
+      .sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px;text-align:center;}
+      .sign-grid .sign-title{font-weight:bold;}
+      .sign-grid .sign-space{height:70px;}
+      ul{margin:6px 0;padding-left:20px;}
+      li{margin:3px 0;font-size:12.5px;}
+      p{font-size:12.5px;}
+      .center-title{text-align:center;}
+      .disclaimer{margin-top:32px;font-size:11px;color:#94a3b8;font-style:italic;}
+    </style></head><body>${innerHtml}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
+  return win;
+}
+
+function printQuote(id, lang = "vi") {
   const q = Store.getQuote(id);
   if (!q) return;
   const client = Store.getClient(q.clientId);
   const settings = Store.getSettings();
   const { sub, discount, tax, total } = quoteTotal(q);
-  const win = window.open("", "_blank", "width=900,height=1000");
-  if (!win) { alert("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup."); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Báo giá ${escapeHtml(q.code)}</title>
-    <style>
-      body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:32px;max-width:800px;margin:auto;}
-      h1{font-size:20px;margin:0;}
-      .muted{color:#64748b;}
-      table{width:100%;border-collapse:collapse;margin-top:16px;}
-      th,td{border:1px solid #cbd5e1;padding:8px;font-size:13px;text-align:left;}
-      th{background:#f1f5f9;}
-      .right{text-align:right;}
-      .totals{width:280px;margin-left:auto;margin-top:12px;}
-      .totals div{display:flex;justify-content:space-between;padding:4px 0;}
-      .grand{font-weight:bold;border-top:1px solid #334155;margin-top:4px;padding-top:8px !important;}
-      .header{display:flex;justify-content:space-between;border-bottom:2px solid #1e293b;padding-bottom:12px;margin-bottom:16px;}
-    </style></head><body>
-      <div class="header">
-        <div>
-          <h1>${escapeHtml(settings.companyName || "Công ty tư vấn")}</h1>
-          <div class="muted">${escapeHtml(settings.companyAddress || "")}</div>
-          <div class="muted">${escapeHtml(settings.companyPhone || "")} ${settings.companyEmail ? "· " + escapeHtml(settings.companyEmail) : ""}</div>
-          ${settings.companyTaxCode ? `<div class="muted">MST: ${escapeHtml(settings.companyTaxCode)}</div>` : ""}
-        </div>
-        <div class="right">
-          <h1>BÁO GIÁ</h1>
-          <div class="muted">Số: ${escapeHtml(q.code)}</div>
-          <div class="muted">Ngày: ${formatDate(q.date)}</div>
-          ${q.validUntil ? `<div class="muted">Hiệu lực đến: ${formatDate(q.validUntil)}</div>` : ""}
-        </div>
+  const T = (key) => t(lang, key);
+  const tf = (key, ...args) => t(lang, key)(...args);
+  const clientName = client ? (client.company || client.name) : "";
+
+  const infoRows = [];
+  infoRows.push(`<div class="info-line"><strong>${T("companyNameLabel")}:</strong> ${escapeHtml(clientName)}</div>`);
+  if (client?.address) infoRows.push(`<div class="info-line"><strong>${T("addressLabel")}:</strong> ${escapeHtml(client.address)}</div>`);
+  if (client?.employeeCount) infoRows.push(`<div class="info-line"><strong>${T("employeeCountLabel")}:</strong> ${escapeHtml(String(client.employeeCount))}</div>`);
+  if (q.scope) infoRows.push(`<div class="info-line"><strong>${T("scopeLabel")}:</strong> ${escapeHtml(q.scope)}</div>`);
+  if (q.duration) infoRows.push(`<div class="info-line"><strong>${T("durationLabel")}:</strong> ${escapeHtml(q.duration)}</div>`);
+
+  const itemsRows = (q.items || []).map((it, idx) => `<tr><td>${idx + 1}</td><td>${escapeHtml(it.description)}</td><td>${escapeHtml(it.unit || "")}</td><td class="center">${it.quantity}</td><td class="right">${formatCurrency(it.unitPrice)}</td><td class="right">${formatCurrency(it.quantity * it.unitPrice)}</td></tr>`).join("");
+  const vatNote = (q.taxPct && q.taxPct > 0) ? tf("vatIncludedNote", q.taxPct) : T("vatExcludedNote");
+
+  const html = `
+    <div class="header">
+      <div>
+        <h1>${escapeHtml(settings.companyName || T("companyFallback"))}</h1>
+        <div class="muted">${escapeHtml(settings.companyAddress || "")}</div>
+        <div class="muted">${settings.companyPhone ? `${T("phoneLabel")}: ${escapeHtml(settings.companyPhone)}` : ""}${settings.companyEmail ? " · " + escapeHtml(settings.companyEmail) : ""}</div>
+        ${settings.companyTaxCode ? `<div class="muted">${T("taxCodeLabel")}: ${escapeHtml(settings.companyTaxCode)}</div>` : ""}
       </div>
-      <p><strong>Kính gửi:</strong> ${escapeHtml(client ? client.name : "")}${client?.company ? ` — ${escapeHtml(client.company)}` : ""}</p>
-      ${client?.address ? `<p class="muted">${escapeHtml(client.address)}</p>` : ""}
-      <table>
-        <thead><tr><th>#</th><th>Mô tả dịch vụ</th><th>ĐVT</th><th>SL</th><th class="right">Đơn giá</th><th class="right">Thành tiền</th></tr></thead>
-        <tbody>
-          ${(q.items || []).map((it, idx) => `<tr><td>${idx + 1}</td><td>${escapeHtml(it.description)}</td><td>${escapeHtml(it.unit || "")}</td><td>${it.quantity}</td><td class="right">${formatCurrency(it.unitPrice)}</td><td class="right">${formatCurrency(it.quantity * it.unitPrice)}</td></tr>`).join("")}
-        </tbody>
-      </table>
-      <div class="totals">
-        <div><span>Tạm tính</span><span>${formatCurrency(sub)}</span></div>
-        <div><span>Chiết khấu (${q.discountPct || 0}%)</span><span>-${formatCurrency(discount)}</span></div>
-        <div><span>VAT (${q.taxPct || 0}%)</span><span>${formatCurrency(tax)}</span></div>
-        <div class="grand"><span>Tổng cộng</span><span>${formatCurrency(total)}</span></div>
+      <div class="right">
+        <h1>${T("quoteTitle")}</h1>
+        <div class="muted">${T("numberLabel")}: ${escapeHtml(q.code)}</div>
+        <div class="muted">${T("dateLabel")}: ${formatDate(q.date)}</div>
       </div>
-      ${q.note ? `<p style="margin-top:24px"><strong>Ghi chú:</strong> ${escapeHtml(q.note)}</p>` : ""}
-      <p class="muted" style="margin-top:48px">Cảm ơn quý khách đã quan tâm đến dịch vụ tư vấn của chúng tôi.</p>
-    </body></html>`);
-  win.document.close();
-  win.focus();
-  setTimeout(() => win.print(), 300);
+    </div>
+    <p>${escapeHtml(tf("quoteGreeting", clientName))}</p>
+    <p>${escapeHtml(T("quoteIntro"))}</p>
+
+    <h2>${T("quoteClientInfoTitle")}</h2>
+    ${infoRows.join("")}
+
+    <h2>${T("quotePriceTitle")}</h2>
+    <table>
+      <thead><tr><th>${T("colIndex")}</th><th>${T("colDesc")}</th><th>${T("colUnit")}</th><th>${T("colQty")}</th><th class="right">${T("colUnitPrice")}</th><th class="right">${T("colLineTotal")}</th></tr></thead>
+      <tbody>${itemsRows}</tbody>
+    </table>
+    <div class="totals">
+      <div><span>${T("subtotalLabel")}</span><span>${formatCurrency(sub)}</span></div>
+      ${q.discountPct ? `<div><span>${T("discountLabel")} (${q.discountPct}%)</span><span>-${formatCurrency(discount)}</span></div>` : ""}
+      <div><span>${T("vatLabel")} (${q.taxPct || 0}%)</span><span>${formatCurrency(tax)}</span></div>
+      <div class="grand"><span>${T("totalLabel")}</span><span>${formatCurrency(total)}</span></div>
+    </div>
+    <p class="muted">${escapeHtml(vatNote)}</p>
+    ${q.validUntil ? `<p class="muted">${escapeHtml(tf("validUntilNote", formatDate(q.validUntil)))}</p>` : ""}
+
+    <h2>${T("paymentTitle")}</h2>
+    <p>${escapeHtml(q.paymentTerms || T("paymentDefault"))}</p>
+
+    ${q.note ? `<h2>${T("noteTitle")}</h2><p>${escapeHtml(q.note)}</p>` : ""}
+
+    <h2>${T("confirmTitle")}</h2>
+    <div class="sign-grid">
+      <div>
+        <div class="sign-title">${T("confirmedByLabel")}</div>
+        <div class="muted">${escapeHtml(clientName)}</div>
+        <div class="sign-space"></div>
+        <div class="muted">${T("signPlaceholder")}</div>
+      </div>
+      <div>
+        <div class="sign-title">${T("preparedByLabel")}</div>
+        <div class="muted">${formatDate(q.date)}</div>
+        <div class="sign-space"></div>
+        <div>${escapeHtml(settings.repName || "")}</div>
+      </div>
+    </div>
+
+    <p class="muted center" style="margin-top:32px">${escapeHtml(T("quoteThanks"))}</p>
+    ${lang !== "vi" ? `<p class="disclaimer">${escapeHtml(T("translationDisclaimer"))}</p>` : ""}
+  `;
+  printDocWindow(`${T("quoteTitle")} ${q.code}`, html);
+}
+
+function printContract(id, lang = "vi") {
+  const c = Store.getContract(id);
+  if (!c) return;
+  const client = Store.getClient(c.clientId);
+  const settings = Store.getSettings();
+  const T = (key) => t(lang, key);
+  const tf = (key, ...args) => t(lang, key)(...args);
+  const list = (key) => t(lang, key) || [];
+
+  const partyA = {
+    name: client ? (client.company || client.name) : "",
+    repName: client?.repName || "",
+    repTitle: client?.repTitle || "",
+    address: client?.address || "",
+    phone: client?.phone || "",
+    taxCode: client?.taxCode || "",
+  };
+  const partyB = {
+    name: settings.companyName || "",
+    repName: settings.repName || "",
+    repTitle: settings.repTitle || "",
+    address: settings.companyAddress || "",
+    phone: settings.companyPhone || "",
+    taxCode: settings.companyTaxCode || "",
+  };
+  const partyInfoHtml = (party) => `
+    <div class="info-line"><strong>${escapeHtml(party.name)}</strong></div>
+    <div class="info-line">${T("representativeLabel")}: ${escapeHtml(party.repName)}${party.repTitle ? ` — ${T("positionLabel")}: ${escapeHtml(party.repTitle)}` : ""}</div>
+    <div class="info-line">${T("addressLabel")}: ${escapeHtml(party.address)}</div>
+    <div class="info-line">${T("phoneLabel")}: ${escapeHtml(party.phone)}</div>
+    <div class="info-line">${T("taxCodeLabel")}: ${escapeHtml(party.taxCode)}</div>
+  `;
+
+  const amountWords = lang === "en" ? numberToWordsEn(c.value) : (lang === "vi" ? numberToWordsVi(c.value) : null);
+
+  const payments = (c.payments || []).slice().sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
+  const scheduleHtml = payments.length > 0
+    ? `<ul>${payments.map((p, idx) => `<li>${escapeHtml(tf("installmentLine", idx + 1, formatCurrency(p.amount), p.dueDate ? formatDate(p.dueDate) : ""))}</li>`).join("")}</ul>`
+    : `<p>${escapeHtml(T("noScheduleNote"))}</p>`;
+
+  const html = `
+    <div class="center-title">
+      <div><strong>${T("nationTitle")}</strong></div>
+      <div>${T("motto")}</div>
+      <div>-----------------</div>
+    </div>
+    <h1 class="center-title" style="margin-top:20px">${T("contractDocTitle")}</h1>
+    <p class="center-title muted">${T("numberLabel")}: ${escapeHtml(c.code)}</p>
+
+    <p>${T("legalIntro")}</p>
+    <ul>${list("legalBasis").map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
+    <p>${T("todayLinePrefix")} ${formatDate(c.signDate || c.createdAt)}, ${T("todayLineSuffix")}</p>
+
+    <table>
+      <tr>
+        <td style="width:50%"><strong>${T("partyALabel")}</strong>${partyInfoHtml(partyA)}</td>
+        <td style="width:50%"><strong>${T("partyBLabel")}</strong>${partyInfoHtml(partyB)}</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:16px">${T("agreementLine")}</p>
+
+    <h2>${T("article1Title")}</h2>
+    <p>${escapeHtml(tf("article1Body"))}</p>
+    ${c.description ? `<p>${escapeHtml(c.description).replace(/\n/g, "<br/>")}</p>` : ""}
+    ${c.location ? `<p><strong>${T("locationLabel")}:</strong> ${escapeHtml(c.location)}</p>` : ""}
+
+    <h2>${T("article2Title")}</h2>
+    <table>
+      <thead><tr><th>STT</th><th>${T("colContent")}</th><th class="right">${T("colCost")}</th></tr></thead>
+      <tbody><tr><td>1</td><td>${escapeHtml(c.title || "")}</td><td class="right">${formatCurrency(c.value)}</td></tr></tbody>
+    </table>
+    <p><strong>${T("totalCostLabel")}:</strong> ${formatCurrency(c.value)}</p>
+    ${amountWords ? `<p><strong>${T("inWordsLabel")}:</strong> ${escapeHtml(amountWords)}</p>` : ""}
+
+    <h2>${T("article3Title")}</h2>
+    <p>${T("paymentMethodLine")}</p>
+    <p>${T("accountNameLabel")}: ${escapeHtml(settings.bankAccountName || "")}</p>
+    <p>${T("accountNumberLabel")}: ${escapeHtml(settings.bankAccountNumber || "")}</p>
+    <p>${T("bankLabel")}: ${escapeHtml(settings.bankName || "")}</p>
+    <p>${T("currencyLabel")}: ${T("currencyValue")}</p>
+    <p><strong>${T("scheduleLabel")}:</strong></p>
+    ${scheduleHtml}
+    <p>${T("invoiceLine")}</p>
+
+    <h2>${T("article4Title")}</h2>
+    <p><strong>${T("respATitle")}</strong></p>
+    <ul>${list("respA").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+    <p><strong>${T("respBTitle")}</strong></p>
+    <ul>${list("respB").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+
+    <h2>${T("article5Title")}</h2>
+    <ul>${list("article5Body").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+
+    <h2>${T("article6Title")}</h2>
+    <p>${T("article6a")}</p>
+    <p>${T("article6b")}</p>
+    <p>${T("article6c")}</p>
+
+    <h2>${T("article7Title")}</h2>
+    <p>${T("article7Body")}</p>
+
+    <h2>${T("article8Title")}</h2>
+    <ul>${list("article8Body").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+
+    <div class="sign-grid">
+      <div><div class="sign-title">${T("sigA")}</div><div class="muted">${T("sigNote")}</div><div class="sign-space"></div></div>
+      <div><div class="sign-title">${T("sigB")}</div><div class="muted">${T("sigNote")}</div><div class="sign-space"></div></div>
+    </div>
+
+    ${lang !== "vi" ? `<p class="disclaimer">${escapeHtml(T("translationDisclaimer"))}</p>` : ""}
+  `;
+  printDocWindow(`${T("contractDocTitle")} ${c.code}`, html);
 }
 
 /* ================= REPORTS ================= */
@@ -1486,9 +2302,20 @@ function renderSettings() {
         <label class="col-span-2">Địa chỉ <input name="companyAddress" value="${escapeHtml(s.companyAddress)}" /></label>
         <label>Điện thoại <input name="companyPhone" value="${escapeHtml(s.companyPhone)}" /></label>
         <label>Email <input type="email" name="companyEmail" value="${escapeHtml(s.companyEmail)}" /></label>
+        <label>Người đại diện <input name="repName" value="${escapeHtml(s.repName || "")}" /></label>
+        <label>Chức danh người đại diện <input name="repTitle" value="${escapeHtml(s.repTitle || "")}" /></label>
         <label>Số ngày cảnh báo sắp hết hạn <input type="number" min="1" name="reminderDays" value="${s.reminderDays}" /></label>
       </form>
       <button class="btn btn-primary" id="settings-save" style="margin-top:12px">Lưu cài đặt</button>
+    </div>
+    <div class="card">
+      <h3>Thông tin ngân hàng (hiển thị trên hợp đồng)</h3>
+      <form id="bank-form" class="form-grid">
+        <label class="col-span-2">Chủ tài khoản <input name="bankAccountName" value="${escapeHtml(s.bankAccountName || "")}" /></label>
+        <label>Số tài khoản <input name="bankAccountNumber" value="${escapeHtml(s.bankAccountNumber || "")}" /></label>
+        <label>Ngân hàng <input name="bankName" value="${escapeHtml(s.bankName || "")}" /></label>
+      </form>
+      <button class="btn btn-primary" id="bank-save" style="margin-top:12px">Lưu thông tin ngân hàng</button>
     </div>
     <div class="card">
       <h3>Dữ liệu</h3>
@@ -1509,6 +2336,13 @@ function renderSettings() {
     payload.reminderDays = Number(payload.reminderDays) || 30;
     Store.saveSettings(payload);
     alert("Đã lưu cài đặt.");
+  });
+
+  document.getElementById("bank-save").addEventListener("click", () => {
+    const form = document.getElementById("bank-form");
+    const payload = Object.fromEntries(new FormData(form).entries());
+    Store.saveSettings(payload);
+    alert("Đã lưu thông tin ngân hàng.");
   });
 
   document.getElementById("btn-export").addEventListener("click", () => {

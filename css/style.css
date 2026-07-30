@@ -61,7 +61,8 @@ html, body {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 11px;
+  letter-spacing: -0.02em;
   flex-shrink: 0;
 }
 
@@ -281,3 +282,7 @@ html, body {
 .totals-box .grand { font-weight: 700; border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px; font-size: 14.5px; }
 
 canvas { width: 100%; display: block; }
+
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lang-btn { padding: 14px; font-size: 14px; }
+.lang-btn:hover { border-color: var(--primary); color: var(--primary); }

@@ -28,6 +28,11 @@ const defaultSettings = {
   companyPhone: "0966 863 672 / 0842 001 236",
   companyEmail: "sales@vietconsulting.org",
   companyTaxCode: "0109499676",
+  repName: "Lê Thị Thắm",
+  repTitle: "Giám đốc",
+  bankAccountName: "CÔNG TY TNHH DỊCH VỤ TƯ VẤN DOANH NGHIỆP VIỆT",
+  bankAccountNumber: "510108386",
+  bankName: "MB Bank – Ngân hàng Quân đội – chi nhánh Thanh Xuân",
   reminderDays: 30,
 };
 

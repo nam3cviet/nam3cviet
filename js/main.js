@@ -1,6 +1,7 @@
 import { Store } from "./store.js";
-import { uid, formatCurrency, formatDate, todayISO, daysUntil, escapeHtml } from "./utils.js";
+import { uid, formatCurrency, formatDate, todayISO, daysUntil, escapeHtml, numberToWordsVi, numberToWordsEn } from "./utils.js";
 import { drawBarChart, drawDonutChart } from "./charts.js";
+import { LANGS, t } from "./i18n.js";
 
 const STATUS_CONTRACT = {
   draft: { label: "Nháp", color: "#64748b" },
@@ -77,6 +78,27 @@ function openModal({ title, bodyHtml, footerHtml = "", onMount, wide = false }) 
   escListener = (e) => { if (e.key === "Escape") closeModal(); };
   document.addEventListener("keydown", escListener);
   if (onMount) onMount(modalRoot.querySelector(".modal-dialog"));
+}
+
+/* ---------------- Language picker ---------------- */
+function pickLanguageThen(onPick) {
+  openModal({
+    title: "Chọn ngôn ngữ in / Select print language",
+    bodyHtml: `
+      <div class="lang-grid">
+        ${LANGS.map((l) => `<button type="button" class="btn lang-btn" data-lang="${l.code}">${l.name}</button>`).join("")}
+      </div>
+      <p class="hint" style="margin-top:12px">Nội dung do bạn tự nhập (mô tả, ghi chú...) sẽ giữ nguyên ngôn ngữ đã nhập; chỉ nhãn/điều khoản chuẩn được dịch.</p>
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button>`,
+    onMount: () => {
+      modalRoot.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => {
+        const lang = b.dataset.lang;
+        closeModal();
+        onPick(lang);
+      }));
+    },
+  });
 }
 
 /* ---------------- Shared helpers ---------------- */
@@ -255,6 +277,7 @@ function renderContractsTable() {
       <td>${formatCurrency(paid)} / <span class="muted">${formatCurrency(remain)}</span></td>
       <td class="actions">
         <button class="icon-btn" data-view-id="${c.id}" title="Xem chi tiết">👁</button>
+        <button class="icon-btn" data-print-id="${c.id}" title="In hợp đồng">🖨</button>
         <button class="icon-btn" data-edit-id="${c.id}" title="Sửa">✎</button>
         <button class="icon-btn danger" data-del-id="${c.id}" title="Xóa">🗑</button>
       </td>
@@ -262,6 +285,7 @@ function renderContractsTable() {
   }).join("");
 
   tbody.querySelectorAll("[data-view-id]").forEach((b) => b.addEventListener("click", () => openContractDetail(b.dataset.viewId)));
+  tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => pickLanguageThen((lang) => printContract(b.dataset.printId, lang))));
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openContractForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
     if (confirm("Xóa hợp đồng này? Hành động không thể hoàn tác.")) { Store.deleteContract(b.dataset.delId); renderContractsTable(); }
@@ -284,6 +308,9 @@ function openContractForm(id, prefill, onSaved) {
         </label>
         <label class="col-span-2">Mô tả / phạm vi công việc
           <textarea name="description" rows="2">${escapeHtml(data.description || "")}</textarea>
+        </label>
+        <label class="col-span-2">Địa điểm thực hiện (tùy chọn)
+          <input name="location" value="${escapeHtml(data.location || "")}" placeholder="Để trống nếu thực hiện tại địa chỉ khách hàng" />
         </label>
         <label>Ngày ký
           <input type="date" name="signDate" value="${data.signDate || todayISO()}" />
@@ -358,10 +385,11 @@ function openContractDetail(id) {
         <tbody id="payments-tbody"></tbody>
       </table></div>
     `,
-    footerHtml: `<button class="btn" data-close>Đóng</button>`,
+    footerHtml: `<button class="btn" data-close>Đóng</button><button class="btn btn-primary" id="btn-print-contract">🖨 In hợp đồng</button>`,
     onMount: () => {
       renderPaymentsTbody(c.id);
       document.getElementById("btn-add-payment").addEventListener("click", () => openPaymentForm(c.id));
+      document.getElementById("btn-print-contract").addEventListener("click", () => pickLanguageThen((lang) => printContract(c.id, lang)));
     },
   });
 }
@@ -522,8 +550,17 @@ function openClientForm(id) {
         <label>Mã số thuế
           <input name="taxCode" value="${escapeHtml(data.taxCode || "")}" />
         </label>
+        <label>Số lao động (nếu có)
+          <input type="number" min="0" name="employeeCount" value="${escapeHtml(data.employeeCount || "")}" />
+        </label>
         <label class="col-span-2">Địa chỉ
           <input name="address" value="${escapeHtml(data.address || "")}" />
+        </label>
+        <label>Người đại diện (dùng khi lập hợp đồng)
+          <input name="repName" value="${escapeHtml(data.repName || "")}" placeholder="VD: Ông Nguyễn Văn A" />
+        </label>
+        <label>Chức danh người đại diện
+          <input name="repTitle" value="${escapeHtml(data.repTitle || "")}" placeholder="VD: Giám đốc" />
         </label>
         <label class="col-span-2">Ghi chú
           <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
@@ -606,7 +643,7 @@ function renderQuotesTable() {
     </tr>`;
   }).join("");
 
-  tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => printQuote(b.dataset.printId)));
+  tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => pickLanguageThen((lang) => printQuote(b.dataset.printId, lang))));
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openQuoteForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-convert-id]").forEach((b) => b.addEventListener("click", () => convertQuoteToContract(b.dataset.convertId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
@@ -635,6 +672,12 @@ function openQuoteForm(id) {
         <label>Hiệu lực đến
           <input type="date" name="validUntil" value="${data.validUntil || ""}" />
         </label>
+        <label>Phạm vi (tùy chọn)
+          <input name="scope" value="${escapeHtml(data.scope || "")}" placeholder="VD: Tư vấn trọn gói" />
+        </label>
+        <label>Thời gian thực hiện dự kiến (tùy chọn)
+          <input name="duration" value="${escapeHtml(data.duration || "")}" placeholder="VD: 1 tháng" />
+        </label>
         <div class="col-span-2">
           <div class="row" style="align-items:center;"><h4 style="margin:8px 0">Hạng mục dịch vụ</h4><button type="button" class="btn btn-sm" id="btn-add-item">+ Thêm dòng</button></div>
           <div class="table-wrap"><table class="data-table">
@@ -649,6 +692,9 @@ function openQuoteForm(id) {
           <input type="number" name="taxPct" min="0" max="100" value="${data.taxPct ?? 10}" />
         </label>
         <div class="col-span-2" id="quote-total-line"></div>
+        <label class="col-span-2">Điều khoản thanh toán (tùy chọn)
+          <textarea name="paymentTerms" rows="2" placeholder="VD: Thanh toán 50% khi ký hợp đồng, 50% còn lại khi nghiệm thu.">${escapeHtml(data.paymentTerms || "")}</textarea>
+        </label>
         <label class="col-span-2">Ghi chú
           <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
         </label>
@@ -745,62 +791,234 @@ function convertQuoteToContract(id) {
   });
 }
 
-function printQuote(id) {
+function printDocWindow(title, innerHtml) {
+  const win = window.open("", "_blank", "width=900,height=1000");
+  if (!win) { alert("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup."); return null; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:32px;max-width:800px;margin:auto;line-height:1.5;}
+      h1{font-size:20px;margin:0;}
+      h2{font-size:14.5px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.02em;border-bottom:1px solid #cbd5e1;padding-bottom:4px;}
+      .muted{color:#64748b;}
+      table{width:100%;border-collapse:collapse;margin-top:10px;}
+      th,td{border:1px solid #cbd5e1;padding:8px;font-size:12.5px;text-align:left;vertical-align:top;}
+      th{background:#f1f5f9;}
+      .right{text-align:right;}
+      .center{text-align:center;}
+      .totals{width:300px;margin-left:auto;margin-top:12px;}
+      .totals div{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;}
+      .grand{font-weight:bold;border-top:1px solid #334155;margin-top:4px;padding-top:8px !important;font-size:14.5px;}
+      .header{display:flex;justify-content:space-between;border-bottom:2px solid #1e293b;padding-bottom:12px;margin-bottom:16px;}
+      .info-line{margin:2px 0;font-size:12.5px;}
+      .sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px;text-align:center;}
+      .sign-grid .sign-title{font-weight:bold;}
+      .sign-grid .sign-space{height:70px;}
+      ul{margin:6px 0;padding-left:20px;}
+      li{margin:3px 0;font-size:12.5px;}
+      p{font-size:12.5px;}
+      .center-title{text-align:center;}
+      .disclaimer{margin-top:32px;font-size:11px;color:#94a3b8;font-style:italic;}
+    </style></head><body>${innerHtml}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
+  return win;
+}
+
+function printQuote(id, lang = "vi") {
   const q = Store.getQuote(id);
   if (!q) return;
   const client = Store.getClient(q.clientId);
   const settings = Store.getSettings();
   const { sub, discount, tax, total } = quoteTotal(q);
-  const win = window.open("", "_blank", "width=900,height=1000");
-  if (!win) { alert("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup."); return; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Báo giá ${escapeHtml(q.code)}</title>
-    <style>
-      body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:32px;max-width:800px;margin:auto;}
-      h1{font-size:20px;margin:0;}
-      .muted{color:#64748b;}
-      table{width:100%;border-collapse:collapse;margin-top:16px;}
-      th,td{border:1px solid #cbd5e1;padding:8px;font-size:13px;text-align:left;}
-      th{background:#f1f5f9;}
-      .right{text-align:right;}
-      .totals{width:280px;margin-left:auto;margin-top:12px;}
-      .totals div{display:flex;justify-content:space-between;padding:4px 0;}
-      .grand{font-weight:bold;border-top:1px solid #334155;margin-top:4px;padding-top:8px !important;}
-      .header{display:flex;justify-content:space-between;border-bottom:2px solid #1e293b;padding-bottom:12px;margin-bottom:16px;}
-    </style></head><body>
-      <div class="header">
-        <div>
-          <h1>${escapeHtml(settings.companyName || "Công ty tư vấn")}</h1>
-          <div class="muted">${escapeHtml(settings.companyAddress || "")}</div>
-          <div class="muted">${escapeHtml(settings.companyPhone || "")} ${settings.companyEmail ? "· " + escapeHtml(settings.companyEmail) : ""}</div>
-          ${settings.companyTaxCode ? `<div class="muted">MST: ${escapeHtml(settings.companyTaxCode)}</div>` : ""}
-        </div>
-        <div class="right">
-          <h1>BÁO GIÁ</h1>
-          <div class="muted">Số: ${escapeHtml(q.code)}</div>
-          <div class="muted">Ngày: ${formatDate(q.date)}</div>
-          ${q.validUntil ? `<div class="muted">Hiệu lực đến: ${formatDate(q.validUntil)}</div>` : ""}
-        </div>
+  const T = (key) => t(lang, key);
+  const tf = (key, ...args) => t(lang, key)(...args);
+  const clientName = client ? (client.company || client.name) : "";
+
+  const infoRows = [];
+  infoRows.push(`<div class="info-line"><strong>${T("companyNameLabel")}:</strong> ${escapeHtml(clientName)}</div>`);
+  if (client?.address) infoRows.push(`<div class="info-line"><strong>${T("addressLabel")}:</strong> ${escapeHtml(client.address)}</div>`);
+  if (client?.employeeCount) infoRows.push(`<div class="info-line"><strong>${T("employeeCountLabel")}:</strong> ${escapeHtml(String(client.employeeCount))}</div>`);
+  if (q.scope) infoRows.push(`<div class="info-line"><strong>${T("scopeLabel")}:</strong> ${escapeHtml(q.scope)}</div>`);
+  if (q.duration) infoRows.push(`<div class="info-line"><strong>${T("durationLabel")}:</strong> ${escapeHtml(q.duration)}</div>`);
+
+  const itemsRows = (q.items || []).map((it, idx) => `<tr><td>${idx + 1}</td><td>${escapeHtml(it.description)}</td><td>${escapeHtml(it.unit || "")}</td><td class="center">${it.quantity}</td><td class="right">${formatCurrency(it.unitPrice)}</td><td class="right">${formatCurrency(it.quantity * it.unitPrice)}</td></tr>`).join("");
+  const vatNote = (q.taxPct && q.taxPct > 0) ? tf("vatIncludedNote", q.taxPct) : T("vatExcludedNote");
+
+  const html = `
+    <div class="header">
+      <div>
+        <h1>${escapeHtml(settings.companyName || T("companyFallback"))}</h1>
+        <div class="muted">${escapeHtml(settings.companyAddress || "")}</div>
+        <div class="muted">${settings.companyPhone ? `${T("phoneLabel")}: ${escapeHtml(settings.companyPhone)}` : ""}${settings.companyEmail ? " · " + escapeHtml(settings.companyEmail) : ""}</div>
+        ${settings.companyTaxCode ? `<div class="muted">${T("taxCodeLabel")}: ${escapeHtml(settings.companyTaxCode)}</div>` : ""}
       </div>
-      <p><strong>Kính gửi:</strong> ${escapeHtml(client ? client.name : "")}${client?.company ? ` — ${escapeHtml(client.company)}` : ""}</p>
-      ${client?.address ? `<p class="muted">${escapeHtml(client.address)}</p>` : ""}
-      <table>
-        <thead><tr><th>#</th><th>Mô tả dịch vụ</th><th>ĐVT</th><th>SL</th><th class="right">Đơn giá</th><th class="right">Thành tiền</th></tr></thead>
-        <tbody>
-          ${(q.items || []).map((it, idx) => `<tr><td>${idx + 1}</td><td>${escapeHtml(it.description)}</td><td>${escapeHtml(it.unit || "")}</td><td>${it.quantity}</td><td class="right">${formatCurrency(it.unitPrice)}</td><td class="right">${formatCurrency(it.quantity * it.unitPrice)}</td></tr>`).join("")}
-        </tbody>
-      </table>
-      <div class="totals">
-        <div><span>Tạm tính</span><span>${formatCurrency(sub)}</span></div>
-        <div><span>Chiết khấu (${q.discountPct || 0}%)</span><span>-${formatCurrency(discount)}</span></div>
-        <div><span>VAT (${q.taxPct || 0}%)</span><span>${formatCurrency(tax)}</span></div>
-        <div class="grand"><span>Tổng cộng</span><span>${formatCurrency(total)}</span></div>
+      <div class="right">
+        <h1>${T("quoteTitle")}</h1>
+        <div class="muted">${T("numberLabel")}: ${escapeHtml(q.code)}</div>
+        <div class="muted">${T("dateLabel")}: ${formatDate(q.date)}</div>
       </div>
-      ${q.note ? `<p style="margin-top:24px"><strong>Ghi chú:</strong> ${escapeHtml(q.note)}</p>` : ""}
-      <p class="muted" style="margin-top:48px">Cảm ơn quý khách đã quan tâm đến dịch vụ tư vấn của chúng tôi.</p>
-    </body></html>`);
-  win.document.close();
-  win.focus();
-  setTimeout(() => win.print(), 300);
+    </div>
+    <p>${escapeHtml(tf("quoteGreeting", clientName))}</p>
+    <p>${escapeHtml(T("quoteIntro"))}</p>
+
+    <h2>${T("quoteClientInfoTitle")}</h2>
+    ${infoRows.join("")}
+
+    <h2>${T("quotePriceTitle")}</h2>
+    <table>
+      <thead><tr><th>${T("colIndex")}</th><th>${T("colDesc")}</th><th>${T("colUnit")}</th><th>${T("colQty")}</th><th class="right">${T("colUnitPrice")}</th><th class="right">${T("colLineTotal")}</th></tr></thead>
+      <tbody>${itemsRows}</tbody>
+    </table>
+    <div class="totals">
+      <div><span>${T("subtotalLabel")}</span><span>${formatCurrency(sub)}</span></div>
+      ${q.discountPct ? `<div><span>${T("discountLabel")} (${q.discountPct}%)</span><span>-${formatCurrency(discount)}</span></div>` : ""}
+      <div><span>${T("vatLabel")} (${q.taxPct || 0}%)</span><span>${formatCurrency(tax)}</span></div>
+      <div class="grand"><span>${T("totalLabel")}</span><span>${formatCurrency(total)}</span></div>
+    </div>
+    <p class="muted">${escapeHtml(vatNote)}</p>
+    ${q.validUntil ? `<p class="muted">${escapeHtml(tf("validUntilNote", formatDate(q.validUntil)))}</p>` : ""}
+
+    <h2>${T("paymentTitle")}</h2>
+    <p>${escapeHtml(q.paymentTerms || T("paymentDefault"))}</p>
+
+    ${q.note ? `<h2>${T("noteTitle")}</h2><p>${escapeHtml(q.note)}</p>` : ""}
+
+    <h2>${T("confirmTitle")}</h2>
+    <div class="sign-grid">
+      <div>
+        <div class="sign-title">${T("confirmedByLabel")}</div>
+        <div class="muted">${escapeHtml(clientName)}</div>
+        <div class="sign-space"></div>
+        <div class="muted">${T("signPlaceholder")}</div>
+      </div>
+      <div>
+        <div class="sign-title">${T("preparedByLabel")}</div>
+        <div class="muted">${formatDate(q.date)}</div>
+        <div class="sign-space"></div>
+        <div>${escapeHtml(settings.repName || "")}</div>
+      </div>
+    </div>
+
+    <p class="muted center" style="margin-top:32px">${escapeHtml(T("quoteThanks"))}</p>
+    ${lang !== "vi" ? `<p class="disclaimer">${escapeHtml(T("translationDisclaimer"))}</p>` : ""}
+  `;
+  printDocWindow(`${T("quoteTitle")} ${q.code}`, html);
+}
+
+function printContract(id, lang = "vi") {
+  const c = Store.getContract(id);
+  if (!c) return;
+  const client = Store.getClient(c.clientId);
+  const settings = Store.getSettings();
+  const T = (key) => t(lang, key);
+  const tf = (key, ...args) => t(lang, key)(...args);
+  const list = (key) => t(lang, key) || [];
+
+  const partyA = {
+    name: client ? (client.company || client.name) : "",
+    repName: client?.repName || "",
+    repTitle: client?.repTitle || "",
+    address: client?.address || "",
+    phone: client?.phone || "",
+    taxCode: client?.taxCode || "",
+  };
+  const partyB = {
+    name: settings.companyName || "",
+    repName: settings.repName || "",
+    repTitle: settings.repTitle || "",
+    address: settings.companyAddress || "",
+    phone: settings.companyPhone || "",
+    taxCode: settings.companyTaxCode || "",
+  };
+  const partyInfoHtml = (party) => `
+    <div class="info-line"><strong>${escapeHtml(party.name)}</strong></div>
+    <div class="info-line">${T("representativeLabel")}: ${escapeHtml(party.repName)}${party.repTitle ? ` — ${T("positionLabel")}: ${escapeHtml(party.repTitle)}` : ""}</div>
+    <div class="info-line">${T("addressLabel")}: ${escapeHtml(party.address)}</div>
+    <div class="info-line">${T("phoneLabel")}: ${escapeHtml(party.phone)}</div>
+    <div class="info-line">${T("taxCodeLabel")}: ${escapeHtml(party.taxCode)}</div>
+  `;
+
+  const amountWords = lang === "en" ? numberToWordsEn(c.value) : (lang === "vi" ? numberToWordsVi(c.value) : null);
+
+  const payments = (c.payments || []).slice().sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
+  const scheduleHtml = payments.length > 0
+    ? `<ul>${payments.map((p, idx) => `<li>${escapeHtml(tf("installmentLine", idx + 1, formatCurrency(p.amount), p.dueDate ? formatDate(p.dueDate) : ""))}</li>`).join("")}</ul>`
+    : `<p>${escapeHtml(T("noScheduleNote"))}</p>`;
+
+  const html = `
+    <div class="center-title">
+      <div><strong>${T("nationTitle")}</strong></div>
+      <div>${T("motto")}</div>
+      <div>-----------------</div>
+    </div>
+    <h1 class="center-title" style="margin-top:20px">${T("contractDocTitle")}</h1>
+    <p class="center-title muted">${T("numberLabel")}: ${escapeHtml(c.code)}</p>
+
+    <p>${T("legalIntro")}</p>
+    <ul>${list("legalBasis").map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
+    <p>${T("todayLinePrefix")} ${formatDate(c.signDate || c.createdAt)}, ${T("todayLineSuffix")}</p>
+
+    <table>
+      <tr>
+        <td style="width:50%"><strong>${T("partyALabel")}</strong>${partyInfoHtml(partyA)}</td>
+        <td style="width:50%"><strong>${T("partyBLabel")}</strong>${partyInfoHtml(partyB)}</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:16px">${T("agreementLine")}</p>
+
+    <h2>${T("article1Title")}</h2>
+    <p>${escapeHtml(tf("article1Body"))}</p>
+    ${c.description ? `<p>${escapeHtml(c.description).replace(/\n/g, "<br/>")}</p>` : ""}
+    ${c.location ? `<p><strong>${T("locationLabel")}:</strong> ${escapeHtml(c.location)}</p>` : ""}
+
+    <h2>${T("article2Title")}</h2>
+    <table>
+      <thead><tr><th>STT</th><th>${T("colContent")}</th><th class="right">${T("colCost")}</th></tr></thead>
+      <tbody><tr><td>1</td><td>${escapeHtml(c.title || "")}</td><td class="right">${formatCurrency(c.value)}</td></tr></tbody>
+    </table>
+    <p><strong>${T("totalCostLabel")}:</strong> ${formatCurrency(c.value)}</p>
+    ${amountWords ? `<p><strong>${T("inWordsLabel")}:</strong> ${escapeHtml(amountWords)}</p>` : ""}
+
+    <h2>${T("article3Title")}</h2>
+    <p>${T("paymentMethodLine")}</p>
+    <p>${T("accountNameLabel")}: ${escapeHtml(settings.bankAccountName || "")}</p>
+    <p>${T("accountNumberLabel")}: ${escapeHtml(settings.bankAccountNumber || "")}</p>
+    <p>${T("bankLabel")}: ${escapeHtml(settings.bankName || "")}</p>
+    <p>${T("currencyLabel")}: ${T("currencyValue")}</p>
+    <p><strong>${T("scheduleLabel")}:</strong></p>
+    ${scheduleHtml}
+    <p>${T("invoiceLine")}</p>
+
+    <h2>${T("article4Title")}</h2>
+    <p><strong>${T("respATitle")}</strong></p>
+    <ul>${list("respA").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+    <p><strong>${T("respBTitle")}</strong></p>
+    <ul>${list("respB").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+
+    <h2>${T("article5Title")}</h2>
+    <ul>${list("article5Body").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+
+    <h2>${T("article6Title")}</h2>
+    <p>${T("article6a")}</p>
+    <p>${T("article6b")}</p>
+    <p>${T("article6c")}</p>
+
+    <h2>${T("article7Title")}</h2>
+    <p>${T("article7Body")}</p>
+
+    <h2>${T("article8Title")}</h2>
+    <ul>${list("article8Body").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+
+    <div class="sign-grid">
+      <div><div class="sign-title">${T("sigA")}</div><div class="muted">${T("sigNote")}</div><div class="sign-space"></div></div>
+      <div><div class="sign-title">${T("sigB")}</div><div class="muted">${T("sigNote")}</div><div class="sign-space"></div></div>
+    </div>
+
+    ${lang !== "vi" ? `<p class="disclaimer">${escapeHtml(T("translationDisclaimer"))}</p>` : ""}
+  `;
+  printDocWindow(`${T("contractDocTitle")} ${c.code}`, html);
 }
 
 /* ================= REPORTS ================= */
@@ -869,9 +1087,20 @@ function renderSettings() {
         <label class="col-span-2">Địa chỉ <input name="companyAddress" value="${escapeHtml(s.companyAddress)}" /></label>
         <label>Điện thoại <input name="companyPhone" value="${escapeHtml(s.companyPhone)}" /></label>
         <label>Email <input type="email" name="companyEmail" value="${escapeHtml(s.companyEmail)}" /></label>
+        <label>Người đại diện <input name="repName" value="${escapeHtml(s.repName || "")}" /></label>
+        <label>Chức danh người đại diện <input name="repTitle" value="${escapeHtml(s.repTitle || "")}" /></label>
         <label>Số ngày cảnh báo sắp hết hạn <input type="number" min="1" name="reminderDays" value="${s.reminderDays}" /></label>
       </form>
       <button class="btn btn-primary" id="settings-save" style="margin-top:12px">Lưu cài đặt</button>
+    </div>
+    <div class="card">
+      <h3>Thông tin ngân hàng (hiển thị trên hợp đồng)</h3>
+      <form id="bank-form" class="form-grid">
+        <label class="col-span-2">Chủ tài khoản <input name="bankAccountName" value="${escapeHtml(s.bankAccountName || "")}" /></label>
+        <label>Số tài khoản <input name="bankAccountNumber" value="${escapeHtml(s.bankAccountNumber || "")}" /></label>
+        <label>Ngân hàng <input name="bankName" value="${escapeHtml(s.bankName || "")}" /></label>
+      </form>
+      <button class="btn btn-primary" id="bank-save" style="margin-top:12px">Lưu thông tin ngân hàng</button>
     </div>
     <div class="card">
       <h3>Dữ liệu</h3>
@@ -892,6 +1121,13 @@ function renderSettings() {
     payload.reminderDays = Number(payload.reminderDays) || 30;
     Store.saveSettings(payload);
     alert("Đã lưu cài đặt.");
+  });
+
+  document.getElementById("bank-save").addEventListener("click", () => {
+    const form = document.getElementById("bank-form");
+    const payload = Object.fromEntries(new FormData(form).entries());
+    Store.saveSettings(payload);
+    alert("Đã lưu thông tin ngân hàng.");
   });
 
   document.getElementById("btn-export").addEventListener("click", () => {
