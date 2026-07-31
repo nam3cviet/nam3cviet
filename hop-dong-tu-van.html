@@ -1,0 +1,2390 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TVV | Quản lý Hợp đồng Tư vấn</title>
+<style>
+:root {
+  --navy: #0f172a;
+  --navy-2: #1e293b;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --green: #16a34a;
+  --amber: #d97706;
+  --red: #dc2626;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--navy);
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 16px;
+}
+
+.brand-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+}
+
+.brand-title { font-weight: 600; font-size: 14px; color: #fff; }
+.brand-sub { font-size: 11.5px; color: #94a3b8; }
+
+.nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+
+.nav-item {
+  display: block;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.nav-item:hover { background: rgba(255,255,255,0.06); }
+.nav-item.active { background: var(--primary); color: #fff; }
+
+.sidebar-footer {
+  font-size: 11px;
+  color: #64748b;
+  padding: 10px 8px 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Content */
+.content {
+  flex: 1;
+  padding: 28px 32px;
+  overflow-y: auto;
+  max-width: 100%;
+}
+
+.view { display: none; }
+.view.active { display: block; }
+
+.page-header { margin-bottom: 20px; }
+.page-header h2 { margin: 0 0 4px; font-size: 21px; }
+.page-header.row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.muted { color: var(--text-muted); }
+.small { font-size: 12px; }
+.hint { color: var(--amber); font-size: 12.5px; margin-top: 8px; }
+
+.row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+
+/* Buttons */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.btn:hover { background: #f1f5f9; }
+.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-sm { padding: 5px 10px; font-size: 12.5px; }
+.btn.danger { color: var(--red); border-color: #fecaca; }
+.btn.danger:hover { background: #fef2f2; }
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  color: var(--text-muted);
+}
+.icon-btn:hover { background: #f1f5f9; color: var(--text); }
+.icon-btn.danger:hover { background: #fef2f2; color: var(--red); }
+
+/* Stat cards */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  border-left: 4px solid var(--primary);
+}
+.stat-card.tone-blue { border-left-color: #2563eb; }
+.stat-card.tone-indigo { border-left-color: #6366f1; }
+.stat-card.tone-green { border-left-color: #16a34a; }
+.stat-card.tone-teal { border-left-color: #0d9488; }
+.stat-card.tone-amber { border-left-color: #d97706; }
+.stat-card.tone-red { border-left-color: #dc2626; }
+
+.stat-label { font-size: 12.5px; color: var(--text-muted); margin-bottom: 6px; }
+.stat-value { font-size: 20px; font-weight: 700; }
+
+/* Cards & grid layout */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+.card h3 { margin: 0 0 12px; font-size: 14.5px; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .sidebar { width: 76px; }
+  .brand-title, .brand-sub, .sidebar-footer, .nav-item { display: none; }
+  .brand { justify-content: center; }
+}
+
+/* Alerts */
+.alert-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+.alert-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border-left: 3px solid var(--amber);
+  font-size: 13px;
+}
+.alert-item.danger { border-left-color: var(--red); background: #fef2f2; }
+.alert-item.warning { border-left-color: var(--amber); background: #fffbeb; }
+.empty { color: var(--text-muted); text-align: center; padding: 18px 0; font-size: 13px; }
+
+/* Toolbar & tables */
+.toolbar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.toolbar input, .toolbar select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13.5px; }
+.toolbar input { flex: 1; min-width: 220px; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th, .data-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.data-table th { background: #f8fafc; color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .02em; }
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover { background: #f8fafc; }
+.actions { display: flex; gap: 2px; white-space: nowrap; }
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.badge-red { background: #fee2e2; color: #dc2626; }
+.badge-amber { background: #fef3c7; color: #d97706; }
+.badge-green { background: #dcfce7; color: #16a34a; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+.modal-dialog {
+  background: var(--surface);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+}
+.modal-dialog.wide { max-width: 760px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.modal-header h3 { margin: 0; font-size: 16px; }
+.modal-body { padding: 20px; overflow-y: auto; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Forms */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text-muted); font-weight: 500; }
+.form-grid .col-span-2 { grid-column: span 2; }
+.form-grid input, .form-grid select, .form-grid textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--text);
+  font-family: inherit;
+}
+.form-grid textarea { resize: vertical; }
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.detail-grid .muted { font-size: 11.5px; display: block; margin-bottom: 2px; }
+
+.totals-box { max-width: 300px; margin-left: auto; font-size: 13px; }
+.totals-box div { display: flex; justify-content: space-between; padding: 4px 0; }
+.totals-box .grand { font-weight: 700; border-top: 1px solid var(--border); margin-top: 4px; padding-top: 8px; font-size: 14.5px; }
+
+canvas { width: 100%; display: block; }
+
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lang-btn { padding: 14px; font-size: 14px; }
+.lang-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+</style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">TVV</span>
+        <div>
+          <div class="brand-title">TVV Hợp Đồng Tư Vấn</div>
+          <div class="brand-sub">Quản lý chuyên nghiệp</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-view="dashboard">📊 Tổng quan</button>
+        <button class="nav-item" data-view="contracts">📄 Hợp đồng</button>
+        <button class="nav-item" data-view="clients">👥 Khách hàng</button>
+        <button class="nav-item" data-view="quotes">🧾 Báo giá</button>
+        <button class="nav-item" data-view="reports">📈 Báo cáo</button>
+        <button class="nav-item" data-view="settings">⚙️ Cài đặt</button>
+      </nav>
+      <div class="sidebar-footer">Dữ liệu lưu tại trình duyệt này</div>
+    </aside>
+    <main class="content">
+      <section id="view-dashboard" class="view active"></section>
+      <section id="view-contracts" class="view"></section>
+      <section id="view-clients" class="view"></section>
+      <section id="view-quotes" class="view"></section>
+      <section id="view-reports" class="view"></section>
+      <section id="view-settings" class="view"></section>
+    </main>
+  </div>
+  <div id="modal-root"></div>
+  <script>
+/* ===== utils.js ===== */
+function uid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "id-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function formatCurrency(n) {
+  const num = Number(n) || 0;
+  return num.toLocaleString("vi-VN") + " đ";
+}
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d)) return "—";
+  return d.toLocaleDateString("vi-VN");
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  if (isNaN(target)) return null;
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target - today) / 86400000);
+}
+
+function escapeHtml(str = "") {
+  return String(str).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[c]));
+}
+
+const VI_DIGITS = ["không", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
+const VI_UNITS = ["", "nghìn", "triệu", "tỷ"];
+
+function viThreeDigits(n, fullZero) {
+  const h = Math.floor(n / 100);
+  const t = Math.floor((n % 100) / 10);
+  const u = n % 10;
+  let out = "";
+  if (h > 0 || fullZero) out += `${VI_DIGITS[h]} trăm `;
+  if (t > 1) {
+    out += `${VI_DIGITS[t]} mươi `;
+    if (u === 1) out += "mốt ";
+    else if (u === 5) out += "lăm ";
+    else if (u > 0) out += `${VI_DIGITS[u]} `;
+  } else if (t === 1) {
+    out += "mười ";
+    if (u === 5) out += "lăm ";
+    else if (u > 0) out += `${VI_DIGITS[u]} `;
+  } else if (t === 0 && u > 0) {
+    if (h > 0 || fullZero) out += "lẻ ";
+    out += `${VI_DIGITS[u]} `;
+  }
+  return out.trim();
+}
+
+// Vietnamese amount-in-words, as required on official contracts/quotes.
+function numberToWordsVi(amount) {
+  const n = Math.round(Math.abs(Number(amount) || 0));
+  if (n === 0) return "Không đồng";
+  const groups = [];
+  let rest = n;
+  while (rest > 0) {
+    groups.unshift(rest % 1000);
+    rest = Math.floor(rest / 1000);
+  }
+  const parts = [];
+  groups.forEach((g, idx) => {
+    if (g === 0) return;
+    const unitIdx = groups.length - 1 - idx;
+    const fullZero = idx > 0;
+    parts.push(`${viThreeDigits(g, fullZero)} ${VI_UNITS[unitIdx] || ""}`.trim());
+  });
+  const words = parts.join(" ").replace(/\s+/g, " ").trim();
+  const capitalized = words.charAt(0).toUpperCase() + words.slice(1);
+  return `${capitalized} đồng`;
+}
+
+const EN_ONES = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+  "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+const EN_TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+const EN_UNITS = ["", "Thousand", "Million", "Billion"];
+
+function enThreeDigits(n) {
+  const h = Math.floor(n / 100);
+  const rest = n % 100;
+  let out = "";
+  if (h > 0) out += `${EN_ONES[h]} Hundred `;
+  if (rest >= 20) {
+    out += EN_TENS[Math.floor(rest / 10)];
+    if (rest % 10 > 0) out += `-${EN_ONES[rest % 10]}`;
+    out += " ";
+  } else if (rest > 0) {
+    out += `${EN_ONES[rest]} `;
+  }
+  return out.trim();
+}
+
+// English amount-in-words, used for the EN print template.
+function numberToWordsEn(amount) {
+  const n = Math.round(Math.abs(Number(amount) || 0));
+  if (n === 0) return "Zero dong";
+  const groups = [];
+  let rest = n;
+  while (rest > 0) {
+    groups.unshift(rest % 1000);
+    rest = Math.floor(rest / 1000);
+  }
+  const parts = [];
+  groups.forEach((g, idx) => {
+    if (g === 0) return;
+    const unitIdx = groups.length - 1 - idx;
+    parts.push(`${enThreeDigits(g)} ${EN_UNITS[unitIdx] || ""}`.trim());
+  });
+  return `${parts.join(" ").replace(/\s+/g, " ").trim()} dong`;
+}
+
+/* ===== i18n.js ===== */
+const LANGS = [
+  { code: "vi", name: "Tiếng Việt" },
+  { code: "en", name: "English" },
+  { code: "ko", name: "한국어" },
+  { code: "zh", name: "中文" },
+];
+
+const I18N = {
+  vi: {
+    companyFallback: "Công ty tư vấn",
+    numberLabel: "Số",
+    dateLabel: "Ngày",
+    taxCodeLabel: "MST",
+    phoneLabel: "Điện thoại",
+    addressLabel: "Địa chỉ",
+
+    quoteTitle: "BÁO GIÁ",
+    quoteGreeting: (name) => `Kính gửi: ${name}`,
+    quoteIntro: "Cảm ơn Quý khách đã quan tâm đến dịch vụ tư vấn của chúng tôi. Chúng tôi xin gửi báo giá chi tiết như sau:",
+    quoteClientInfoTitle: "THÔNG TIN KHÁCH HÀNG",
+    companyNameLabel: "Tên công ty",
+    employeeCountLabel: "Số lao động",
+    scopeLabel: "Phạm vi",
+    durationLabel: "Thời gian thực hiện dự kiến",
+    quotePriceTitle: "BÁO PHÍ",
+    colIndex: "STT",
+    colDesc: "Nội dung",
+    colUnit: "ĐVT",
+    colQty: "SL",
+    colUnitPrice: "Đơn giá",
+    colLineTotal: "Thành tiền",
+    subtotalLabel: "Tạm tính",
+    discountLabel: "Chiết khấu",
+    vatLabel: "Thuế GTGT",
+    totalLabel: "Tổng cộng",
+    vatIncludedNote: (pct) => `Chi phí trên đã bao gồm thuế GTGT (${pct}%).`,
+    vatExcludedNote: "Chi phí trên chưa bao gồm thuế GTGT.",
+    validUntilNote: (date) => `Báo giá có hiệu lực đến hết ngày ${date}.`,
+    paymentTitle: "THANH TOÁN",
+    paymentDefault: "Điều khoản thanh toán cụ thể sẽ theo thỏa thuận giữa hai bên khi ký hợp đồng chính thức.",
+    noteTitle: "Ghi chú",
+    confirmTitle: "XÁC NHẬN",
+    confirmedByLabel: "Xác nhận đồng ý báo giá",
+    preparedByLabel: "Người lập báo giá",
+    signPlaceholder: "(Ký, họ tên)",
+    quoteThanks: "Cảm ơn Quý khách đã tin tưởng và sử dụng dịch vụ của chúng tôi!",
+
+    contractDocTitle: "HỢP ĐỒNG DỊCH VỤ TƯ VẤN",
+    nationTitle: "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM",
+    motto: "Độc lập – Tự do – Hạnh phúc",
+    legalIntro: "Căn cứ:",
+    legalBasis: [
+      "Bộ luật Dân sự nước Cộng hòa Xã hội chủ nghĩa Việt Nam;",
+      "Luật Thương mại nước Cộng hòa Xã hội chủ nghĩa Việt Nam;",
+      "Nhu cầu và khả năng của hai bên.",
+    ],
+    todayLinePrefix: "Hôm nay, ngày",
+    todayLineSuffix: "hai bên chúng tôi gồm có:",
+    partyALabel: "BÊN A (Bên sử dụng dịch vụ)",
+    partyBLabel: "BÊN B (Bên cung cấp dịch vụ)",
+    representativeLabel: "Người đại diện",
+    positionLabel: "Chức danh",
+    agreementLine: "Hai bên thỏa thuận, thống nhất ký kết hợp đồng với các điều khoản sau đây:",
+
+    article1Title: "ĐIỀU 1: PHẠM VI CÔNG VIỆC VÀ ĐỊA ĐIỂM THỰC HIỆN",
+    article1Body: (name) => `Bên A đồng ý thuê và Bên B đồng ý cung cấp dịch vụ tư vấn cho Bên A với nội dung, phạm vi công việc như sau:`,
+    locationLabel: "Địa điểm thực hiện",
+
+    article2Title: "ĐIỀU 2: GIÁ TRỊ HỢP ĐỒNG",
+    colContent: "Nội dung",
+    colCost: "Chi phí (VNĐ)",
+    totalCostLabel: "Tổng giá trị hợp đồng",
+    inWordsLabel: "Bằng chữ",
+
+    article3Title: "ĐIỀU 3: ĐIỀU KHOẢN THANH TOÁN",
+    paymentMethodLine: "Phương thức thanh toán: chuyển khoản ngân hàng, Bên A chịu phí chuyển khoản (nếu có).",
+    accountNameLabel: "Chủ tài khoản",
+    accountNumberLabel: "Số tài khoản",
+    bankLabel: "Tại ngân hàng",
+    currencyLabel: "Đồng tiền thanh toán",
+    currencyValue: "Việt Nam đồng (VNĐ)",
+    scheduleLabel: "Lịch thanh toán",
+    installmentLine: (n, amount, date) => `Đợt ${n}: ${amount}${date ? ` — hạn thanh toán ngày ${date}` : ""}.`,
+    noScheduleNote: "Thanh toán 100% giá trị hợp đồng sau khi hai bên ký kết và Bên B hoàn thành công việc, trừ khi hai bên có thỏa thuận khác bằng văn bản.",
+    invoiceLine: "Bên B xuất hóa đơn cho Bên A khi hai bên nghiệm thu, thanh toán hoàn thành công việc.",
+
+    article4Title: "ĐIỀU 4: TRÁCH NHIỆM CỦA CÁC BÊN",
+    respATitle: "Trách nhiệm của Bên A",
+    respA: [
+      "Thanh toán giá trị hợp đồng cho Bên B theo quy định tại Điều 2 và Điều 3.",
+      "Cung cấp đầy đủ thông tin, tài liệu, nguồn lực (nhân sự, thời gian, phương tiện làm việc) cần thiết để Bên B thực hiện công việc tư vấn.",
+      "Phối hợp, thực hiện theo hướng dẫn, đề xuất của Bên B trong quá trình triển khai.",
+      "Hỗ trợ Bên B giải quyết các vấn đề phát sinh trong quá trình thực hiện hợp đồng (nếu có).",
+    ],
+    respBTitle: "Trách nhiệm của Bên B",
+    respB: [
+      "Bố trí nhân sự có chuyên môn phù hợp để thực hiện công việc tư vấn theo đúng phạm vi tại Điều 1.",
+      "Cung cấp tài liệu, báo cáo, kết quả tư vấn theo tiến độ đã thống nhất với Bên A.",
+      "Đảm bảo chất lượng, tiến độ công việc tư vấn theo đúng cam kết trong hợp đồng.",
+      "Hỗ trợ, phối hợp với Bên A giải quyết các vấn đề phát sinh trong quá trình thực hiện (nếu có).",
+    ],
+
+    article5Title: "ĐIỀU 5: NGHIỆM THU CÔNG VIỆC",
+    article5Body: [
+      "Hai bên tiến hành nghiệm thu, xác nhận hoàn thành công việc sau khi Bên B hoàn thành các nội dung tư vấn nêu tại Điều 1 của hợp đồng.",
+      "Các công việc phát sinh ngoài phạm vi tại Điều 1 (nếu có) sẽ được hai bên thống nhất và bổ sung bằng Phụ lục hợp đồng.",
+    ],
+
+    article6Title: "ĐIỀU 6: TẠM DỪNG, THAY ĐỔI, HỦY HỢP ĐỒNG",
+    article6a: "a) Tạm dừng hợp đồng: Hợp đồng có thể tạm dừng nếu một trong hai bên vi phạm các điều khoản đã thỏa thuận. Việc thực hiện hợp đồng chỉ được tiếp tục sau khi bên vi phạm đã khắc phục và thanh toán đầy đủ các chi phí phát sinh (nếu có).",
+    article6b: "b) Thay đổi nội dung hợp đồng: Mọi thay đổi phải được thông báo bằng văn bản cho bên còn lại trước ít nhất 07 (bảy) ngày làm việc. Chi phí phát sinh do thay đổi thuộc trách nhiệm của bên đề nghị thay đổi. Công việc phát sinh ngoài phạm vi hợp đồng sẽ được bổ sung bằng Phụ lục hợp đồng.",
+    article6c: "c) Hủy hợp đồng: Một bên có quyền hủy hợp đồng nếu bên còn lại vi phạm nghiêm trọng các điều khoản đã thỏa thuận và phải thông báo ngay cho bên kia; nếu không thông báo mà gây thiệt hại thì phải bồi thường. Khi hợp đồng bị hủy, hai bên hoàn trả cho nhau những gì đã nhận; nếu không hoàn trả được bằng hiện vật thì hoàn trả bằng tiền. Giá trị bồi thường không vượt quá giá trị phần công việc đã thực hiện tính đến thời điểm hủy hợp đồng.",
+
+    article7Title: "ĐIỀU 7: ĐIỀU KHOẢN BẢO MẬT",
+    article7Body: "Hai bên cam kết bảo mật tuyệt đối nội dung của hợp đồng này và mọi thông tin, tài liệu trao đổi trong quá trình thực hiện, không tiết lộ cho bên thứ ba khi chưa có sự đồng ý bằng văn bản của bên còn lại, trừ trường hợp pháp luật có quy định khác.",
+
+    article8Title: "ĐIỀU 8: CAM KẾT CHUNG",
+    article8Body: [
+      "Hai bên cam kết thực hiện đầy đủ các điều khoản của hợp đồng này. Những nội dung không được quy định tại hợp đồng sẽ thực hiện theo quy định pháp luật hiện hành của Việt Nam.",
+      "Trong quá trình thực hiện, nếu phát sinh vướng mắc, hai bên cùng bàn bạc giải quyết trên tinh thần hợp tác, thiện chí. Trường hợp không thể tự giải quyết, tranh chấp sẽ được đưa ra giải quyết tại Tòa án nhân dân có thẩm quyền.",
+      "Hợp đồng có hiệu lực kể từ ngày hai bên ký kết và tự động thanh lý khi hai bên đã hoàn thành đầy đủ nghĩa vụ, trách nhiệm quy định trong hợp đồng, không cần lập biên bản thanh lý riêng, trừ khi một bên có yêu cầu bằng văn bản.",
+      "Hợp đồng được lập thành 02 (hai) bản có giá trị pháp lý như nhau, mỗi bên giữ 01 (một) bản.",
+    ],
+
+    sigA: "ĐẠI DIỆN BÊN A",
+    sigB: "ĐẠI DIỆN BÊN B",
+    sigNote: "(Ký, họ tên, đóng dấu)",
+    translationDisclaimer: "Đây là bản dịch tham khảo. Bản tiếng Việt là bản có giá trị pháp lý chính thức.",
+  },
+
+  en: {
+    companyFallback: "Consulting Company",
+    numberLabel: "No.",
+    dateLabel: "Date",
+    taxCodeLabel: "Tax code",
+    phoneLabel: "Phone",
+    addressLabel: "Address",
+
+    quoteTitle: "QUOTATION",
+    quoteGreeting: (name) => `Dear: ${name}`,
+    quoteIntro: "Thank you for your interest in our consulting services. Please find our detailed quotation below:",
+    quoteClientInfoTitle: "CLIENT INFORMATION",
+    companyNameLabel: "Company name",
+    employeeCountLabel: "Number of employees",
+    scopeLabel: "Scope",
+    durationLabel: "Estimated duration",
+    quotePriceTitle: "QUOTATION",
+    colIndex: "No.",
+    colDesc: "Description",
+    colUnit: "Unit",
+    colQty: "Qty",
+    colUnitPrice: "Unit price",
+    colLineTotal: "Amount",
+    subtotalLabel: "Subtotal",
+    discountLabel: "Discount",
+    vatLabel: "VAT",
+    totalLabel: "Total",
+    vatIncludedNote: (pct) => `The above cost includes VAT (${pct}%).`,
+    vatExcludedNote: "The above cost does not include VAT.",
+    validUntilNote: (date) => `This quotation is valid until ${date}.`,
+    paymentTitle: "PAYMENT",
+    paymentDefault: "Detailed payment terms will be agreed upon when the official contract is signed.",
+    noteTitle: "Note",
+    confirmTitle: "CONFIRMATION",
+    confirmedByLabel: "Confirmed by (Client)",
+    preparedByLabel: "Prepared by",
+    signPlaceholder: "(Signature, full name)",
+    quoteThanks: "Thank you for your trust and for using our services!",
+
+    contractDocTitle: "CONSULTING SERVICE CONTRACT",
+    nationTitle: "SOCIALIST REPUBLIC OF VIETNAM",
+    motto: "Independence – Freedom – Happiness",
+    legalIntro: "Pursuant to:",
+    legalBasis: [
+      "The Civil Code of the Socialist Republic of Vietnam;",
+      "The Commercial Law of the Socialist Republic of Vietnam;",
+      "The needs and capabilities of both parties.",
+    ],
+    todayLinePrefix: "Today,",
+    todayLineSuffix: "the two parties are:",
+    partyALabel: "PARTY A (Service User)",
+    partyBLabel: "PARTY B (Service Provider)",
+    representativeLabel: "Representative",
+    positionLabel: "Position",
+    agreementLine: "The two parties agree to enter into this contract with the following terms:",
+
+    article1Title: "ARTICLE 1: SCOPE OF WORK AND LOCATION",
+    article1Body: () => "Party A agrees to engage, and Party B agrees to provide, consulting services to Party A with the following scope of work:",
+    locationLabel: "Place of performance",
+
+    article2Title: "ARTICLE 2: CONTRACT VALUE",
+    colContent: "Description",
+    colCost: "Cost (VND)",
+    totalCostLabel: "Total contract value",
+    inWordsLabel: "In words",
+
+    article3Title: "ARTICLE 3: PAYMENT TERMS",
+    paymentMethodLine: "Payment method: bank transfer; Party A bears the bank transfer fee (if any).",
+    accountNameLabel: "Account name",
+    accountNumberLabel: "Account number",
+    bankLabel: "Bank",
+    currencyLabel: "Payment currency",
+    currencyValue: "Vietnamese Dong (VND)",
+    scheduleLabel: "Payment schedule",
+    installmentLine: (n, amount, date) => `Installment ${n}: ${amount}${date ? ` — due on ${date}` : ""}.`,
+    noScheduleNote: "100% of the contract value shall be paid after both parties sign the contract and Party B completes the work, unless otherwise agreed in writing.",
+    invoiceLine: "Party B shall issue an invoice to Party A upon acceptance and payment for the completed work.",
+
+    article4Title: "ARTICLE 4: RESPONSIBILITIES OF THE PARTIES",
+    respATitle: "Responsibilities of Party A",
+    respA: [
+      "Pay the contract value to Party B as specified in Articles 2 and 3.",
+      "Provide sufficient information, documents, and resources (personnel, time, working facilities) necessary for Party B to perform the consulting work.",
+      "Cooperate and follow Party B's guidance and recommendations during implementation.",
+      "Support Party B in resolving any issues arising during the performance of the contract (if any).",
+    ],
+    respBTitle: "Responsibilities of Party B",
+    respB: [
+      "Assign appropriately qualified personnel to perform the consulting work within the scope stated in Article 1.",
+      "Provide documents, reports, and consulting results according to the schedule agreed with Party A.",
+      "Ensure the quality and progress of the consulting work as committed in the contract.",
+      "Support and cooperate with Party A to resolve issues arising during implementation (if any).",
+    ],
+
+    article5Title: "ARTICLE 5: ACCEPTANCE OF WORK",
+    article5Body: [
+      "The two parties shall carry out acceptance and confirm completion of the work after Party B completes the consulting content stated in Article 1 of the contract.",
+      "Any work arising outside the scope of Article 1 (if any) shall be agreed upon and added via a contract appendix.",
+    ],
+
+    article6Title: "ARTICLE 6: SUSPENSION, AMENDMENT, TERMINATION",
+    article6a: "a) Suspension: The contract may be suspended if either party breaches the agreed terms. Performance shall resume only after the breaching party remedies the breach and pays any related costs in full (if any).",
+    article6b: "b) Amendment: Any amendment must be notified in writing to the other party at least 07 (seven) working days in advance. Costs arising from an amendment shall be borne by the party requesting it. Work arising outside the contract scope shall be added via a contract appendix.",
+    article6c: "c) Termination: Either party may terminate the contract if the other party seriously breaches the agreed terms, and must promptly notify the other party; failure to notify, causing damage, shall require compensation. Upon termination, the parties shall return to each other what has been received; if this is not possible in kind, it shall be returned in cash. Compensation shall not exceed the value of the work completed up to the time of termination.",
+
+    article7Title: "ARTICLE 7: CONFIDENTIALITY",
+    article7Body: "Both parties undertake to keep the content of this contract and all information and documents exchanged during its performance strictly confidential, and shall not disclose them to any third party without the other party's prior written consent, except as otherwise required by law.",
+
+    article8Title: "ARTICLE 8: GENERAL COMMITMENTS",
+    article8Body: [
+      "Both parties commit to fully perform the terms of this contract. Matters not provided for in this contract shall be governed by the applicable laws of Vietnam.",
+      "During performance, any issues arising shall be resolved through discussion in a spirit of cooperation and good faith. If the parties cannot resolve a dispute themselves, it shall be settled at the competent People's Court.",
+      "This contract takes effect from the date of signing by both parties and is automatically liquidated once both parties have fully performed their obligations under the contract, without the need for a separate liquidation record, unless either party requests one in writing.",
+      "This contract is made in 02 (two) copies of equal legal validity, with each party retaining 01 (one) copy.",
+    ],
+
+    sigA: "FOR PARTY A",
+    sigB: "FOR PARTY B",
+    sigNote: "(Signature, full name, seal)",
+    translationDisclaimer: "This is a reference translation. The Vietnamese version is the officially binding text.",
+  },
+
+  ko: {
+    companyFallback: "컨설팅 회사",
+    numberLabel: "번호",
+    dateLabel: "날짜",
+    taxCodeLabel: "사업자등록번호",
+    phoneLabel: "전화",
+    addressLabel: "주소",
+
+    quoteTitle: "견적서",
+    quoteGreeting: (name) => `수신: ${name}`,
+    quoteIntro: "저희 컨설팅 서비스에 관심을 가져 주셔서 감사합니다. 아래와 같이 상세 견적을 안내드립니다:",
+    quoteClientInfoTitle: "고객 정보",
+    companyNameLabel: "회사명",
+    employeeCountLabel: "직원 수",
+    scopeLabel: "범위",
+    durationLabel: "예상 수행 기간",
+    quotePriceTitle: "견적 내역",
+    colIndex: "번호",
+    colDesc: "내용",
+    colUnit: "단위",
+    colQty: "수량",
+    colUnitPrice: "단가",
+    colLineTotal: "금액",
+    subtotalLabel: "소계",
+    discountLabel: "할인",
+    vatLabel: "부가세",
+    totalLabel: "합계",
+    vatIncludedNote: (pct) => `위 비용은 부가가치세(${pct}%)가 포함된 금액입니다.`,
+    vatExcludedNote: "위 비용은 부가가치세가 포함되지 않은 금액입니다.",
+    validUntilNote: (date) => `본 견적서의 유효기간은 ${date}까지입니다.`,
+    paymentTitle: "결제 조건",
+    paymentDefault: "구체적인 결제 조건은 정식 계약 체결 시 양 당사자 간 협의하여 결정합니다.",
+    noteTitle: "비고",
+    confirmTitle: "확인",
+    confirmedByLabel: "견적 승인 확인 (고객)",
+    preparedByLabel: "작성자",
+    signPlaceholder: "(서명, 성명)",
+    quoteThanks: "저희 서비스를 신뢰하고 이용해 주셔서 감사합니다!",
+
+    contractDocTitle: "컨설팅 서비스 계약서",
+    nationTitle: "베트남 사회주의 공화국",
+    motto: "독립 – 자유 – 행복",
+    legalIntro: "다음 근거에 의거하여:",
+    legalBasis: [
+      "베트남 사회주의 공화국 민법;",
+      "베트남 사회주의 공화국 상법;",
+      "양 당사자의 필요 및 역량.",
+    ],
+    todayLinePrefix: "오늘,",
+    todayLineSuffix: "양 당사자는 다음과 같습니다:",
+    partyALabel: "갑 (서비스 이용자)",
+    partyBLabel: "을 (서비스 제공자)",
+    representativeLabel: "대표자",
+    positionLabel: "직위",
+    agreementLine: "양 당사자는 다음 조항에 따라 본 계약을 체결하기로 합의한다:",
+
+    article1Title: "제1조: 업무 범위 및 수행 장소",
+    article1Body: () => "갑은 을에게 컨설팅 서비스를 의뢰하고, 을은 다음과 같은 범위의 업무를 갑에게 제공하기로 합의한다:",
+    locationLabel: "수행 장소",
+
+    article2Title: "제2조: 계약 금액",
+    colContent: "내용",
+    colCost: "비용 (VND)",
+    totalCostLabel: "총 계약 금액",
+    inWordsLabel: "금액(문자)",
+
+    article3Title: "제3조: 결제 조건",
+    paymentMethodLine: "결제 방법: 계좌이체. 이체 수수료(있는 경우)는 갑이 부담한다.",
+    accountNameLabel: "예금주",
+    accountNumberLabel: "계좌번호",
+    bankLabel: "은행",
+    currencyLabel: "결제 통화",
+    currencyValue: "베트남 동 (VND)",
+    scheduleLabel: "결제 일정",
+    installmentLine: (n, amount, date) => `${n}차: ${amount}${date ? ` — 결제기한 ${date}` : ""}.`,
+    noScheduleNote: "별도의 서면 합의가 없는 한, 양 당사자 계약 체결 및 을의 업무 완료 후 계약금액의 100%를 결제한다.",
+    invoiceLine: "을은 업무 완료 검수 및 결제 시 갑에게 세금계산서를 발행한다.",
+
+    article4Title: "제4조: 양 당사자의 책임",
+    respATitle: "갑의 책임",
+    respA: [
+      "제2조 및 제3조에 따라 을에게 계약 금액을 지급한다.",
+      "을이 컨설팅 업무를 수행하는 데 필요한 정보, 자료, 인력·시간·업무 공간 등의 자원을 충분히 제공한다.",
+      "수행 과정에서 을의 안내 및 제안에 협조하고 이를 이행한다.",
+      "계약 이행 중 발생하는 문제(있는 경우) 해결을 위해 을을 지원한다.",
+    ],
+    respBTitle: "을의 책임",
+    respB: [
+      "제1조에 명시된 범위 내에서 업무를 수행할 적합한 전문 인력을 배치한다.",
+      "갑과 합의된 일정에 따라 자료, 보고서, 컨설팅 결과물을 제공한다.",
+      "계약에서 약속한 품질과 일정을 준수하여 업무를 수행한다.",
+      "수행 과정에서 발생하는 문제(있는 경우) 해결을 위해 갑과 협력한다.",
+    ],
+
+    article5Title: "제5조: 업무 검수",
+    article5Body: [
+      "을이 본 계약 제1조에 명시된 컨설팅 내용을 완료한 후, 양 당사자는 업무 완료를 검수·확인한다.",
+      "제1조 범위 외의 추가 업무(있는 경우)는 양 당사자 협의 후 계약 부속서로 추가한다.",
+    ],
+
+    article6Title: "제6조: 계약의 중지·변경·해지",
+    article6a: "a) 계약 중지: 일방이 합의된 조항을 위반할 경우 계약은 중지될 수 있다. 위반 당사자가 위반 사항을 시정하고 관련 비용(있는 경우)을 전액 지급한 후에만 계약 이행이 재개된다.",
+    article6b: "b) 계약 내용 변경: 모든 변경 사항은 최소 7(칠) 영업일 전에 서면으로 상대방에게 통지해야 한다. 변경으로 인해 발생하는 비용은 변경을 요청한 당사자가 부담한다. 계약 범위를 벗어나는 추가 업무는 계약 부속서로 추가한다.",
+    article6c: "c) 계약 해지: 상대방이 합의된 조항을 중대하게 위반할 경우 일방은 계약을 해지할 수 있으며, 즉시 상대방에게 통지해야 한다. 통지하지 않아 손해가 발생한 경우 배상 책임을 진다. 계약 해지 시 양 당사자는 수령한 것을 서로 반환하며, 현물로 반환할 수 없는 경우 금전으로 반환한다. 배상 금액은 해지 시점까지 완료된 업무 가치를 초과할 수 없다.",
+
+    article7Title: "제7조: 비밀유지 조항",
+    article7Body: "양 당사자는 본 계약의 내용 및 이행 과정에서 교환된 모든 정보와 자료를 철저히 비밀로 유지하며, 법률에 달리 정함이 없는 한 상대방의 사전 서면 동의 없이 제3자에게 공개하지 않는다.",
+
+    article8Title: "제8조: 공통 약정 사항",
+    article8Body: [
+      "양 당사자는 본 계약의 조항을 성실히 이행할 것을 약속한다. 본 계약에 명시되지 않은 사항은 베트남 현행 법률에 따른다.",
+      "이행 과정에서 문제가 발생할 경우 양 당사자는 협력과 신의성실의 정신으로 협의하여 해결한다. 자체적으로 해결할 수 없는 분쟁은 관할 인민법원에서 해결한다.",
+      "본 계약은 양 당사자 서명일로부터 효력이 발생하며, 양 당사자가 계약상 의무와 책임을 모두 이행하면 별도의 청산서 작성 없이 자동으로 종료된다. 단, 일방이 서면으로 요청하는 경우는 예외로 한다.",
+      "본 계약은 동일한 법적 효력을 가지는 2(이)부로 작성하며, 양 당사자가 각 1(일)부씩 보관한다.",
+    ],
+
+    sigA: "갑 대표",
+    sigB: "을 대표",
+    sigNote: "(서명, 성명, 직인)",
+    translationDisclaimer: "본 번역본은 참고용입니다. 베트남어 원본이 공식적으로 법적 효력을 가집니다.",
+  },
+
+  zh: {
+    companyFallback: "咨询公司",
+    numberLabel: "编号",
+    dateLabel: "日期",
+    taxCodeLabel: "税号",
+    phoneLabel: "电话",
+    addressLabel: "地址",
+
+    quoteTitle: "报价单",
+    quoteGreeting: (name) => `致：${name}`,
+    quoteIntro: "感谢贵司对我们咨询服务的关注，详细报价如下：",
+    quoteClientInfoTitle: "客户信息",
+    companyNameLabel: "公司名称",
+    employeeCountLabel: "员工人数",
+    scopeLabel: "服务范围",
+    durationLabel: "预计执行时间",
+    quotePriceTitle: "报价明细",
+    colIndex: "序号",
+    colDesc: "内容",
+    colUnit: "单位",
+    colQty: "数量",
+    colUnitPrice: "单价",
+    colLineTotal: "金额",
+    subtotalLabel: "小计",
+    discountLabel: "折扣",
+    vatLabel: "增值税",
+    totalLabel: "总计",
+    vatIncludedNote: (pct) => `以上费用已含增值税（${pct}%）。`,
+    vatExcludedNote: "以上费用不含增值税。",
+    validUntilNote: (date) => `本报价单有效期至 ${date}。`,
+    paymentTitle: "付款方式",
+    paymentDefault: "具体付款条款将在正式签订合同时由双方协商确定。",
+    noteTitle: "备注",
+    confirmTitle: "确认",
+    confirmedByLabel: "客户确认",
+    preparedByLabel: "制表人",
+    signPlaceholder: "（签名、姓名）",
+    quoteThanks: "感谢贵司的信任与支持！",
+
+    contractDocTitle: "咨询服务合同",
+    nationTitle: "越南社会主义共和国",
+    motto: "独立 – 自由 – 幸福",
+    legalIntro: "依据：",
+    legalBasis: [
+      "越南社会主义共和国《民法典》；",
+      "越南社会主义共和国《商法》；",
+      "双方的需求与能力。",
+    ],
+    todayLinePrefix: "今天，",
+    todayLineSuffix: "双方如下：",
+    partyALabel: "甲方（服务使用方）",
+    partyBLabel: "乙方（服务提供方）",
+    representativeLabel: "代表人",
+    positionLabel: "职务",
+    agreementLine: "双方协商一致，同意签订本合同，条款如下：",
+
+    article1Title: "第一条：工作范围及执行地点",
+    article1Body: () => "甲方同意委托、乙方同意为甲方提供咨询服务，具体工作范围如下：",
+    locationLabel: "执行地点",
+
+    article2Title: "第二条：合同金额",
+    colContent: "内容",
+    colCost: "费用（越南盾）",
+    totalCostLabel: "合同总金额",
+    inWordsLabel: "大写金额",
+
+    article3Title: "第三条：付款条款",
+    paymentMethodLine: "付款方式：银行转账，转账手续费（如有）由甲方承担。",
+    accountNameLabel: "账户名称",
+    accountNumberLabel: "账号",
+    bankLabel: "开户银行",
+    currencyLabel: "付款币种",
+    currencyValue: "越南盾 (VND)",
+    scheduleLabel: "付款计划",
+    installmentLine: (n, amount, date) => `第${n}期：${amount}${date ? `，付款期限 ${date}` : ""}。`,
+    noScheduleNote: "除双方另有书面约定外，应在双方签订合同且乙方完成工作后，一次性支付合同金额的100%。",
+    invoiceLine: "乙方应在双方验收并完成付款时向甲方开具发票。",
+
+    article4Title: "第四条：双方责任",
+    respATitle: "甲方责任",
+    respA: [
+      "按第二条、第三条规定向乙方支付合同款项。",
+      "提供乙方开展咨询工作所需的充分信息、资料及资源（人员、时间、办公条件等）。",
+      "在实施过程中配合并执行乙方的指导与建议。",
+      "协助乙方解决合同履行过程中出现的问题（如有）。",
+    ],
+    respBTitle: "乙方责任",
+    respB: [
+      "安排具备相应专业能力的人员，按第一条范围开展咨询工作。",
+      "按与甲方商定的进度提供资料、报告及咨询成果。",
+      "按合同承诺保证咨询工作的质量与进度。",
+      "配合甲方解决实施过程中出现的问题（如有）。",
+    ],
+
+    article5Title: "第五条：工作验收",
+    article5Body: [
+      "乙方完成本合同第一条所述咨询内容后，双方进行验收并确认工作完成。",
+      "超出第一条范围的新增工作（如有），由双方协商一致后以合同附件形式补充。",
+    ],
+
+    article6Title: "第六条：合同的暂停、变更与终止",
+    article6a: "a) 合同暂停：若一方违反约定条款，合同可暂停执行；违约方纠正违约行为并足额支付相关费用（如有）后，方可恢复履行。",
+    article6b: "b) 合同变更：任何变更须至少提前7（七）个工作日以书面形式通知对方。因变更产生的费用由提出变更的一方承担。超出合同范围的新增工作以合同附件形式补充。",
+    article6c: "c) 合同终止：若对方严重违反约定条款，一方有权终止合同，并须立即通知对方；未通知而造成损失的，须承担赔偿责任。合同终止后，双方应相互返还已收取的款项或财物；无法以实物返还的，以现金折算返还。赔偿金额不超过终止时已完成工作的价值。",
+
+    article7Title: "第七条：保密条款",
+    article7Body: "双方承诺对本合同内容及履行过程中交换的所有信息、资料严格保密，未经对方书面同意不得向任何第三方披露，法律另有规定的除外。",
+
+    article8Title: "第八条：共同承诺",
+    article8Body: [
+      "双方承诺全面履行本合同各项条款。本合同未尽事宜，按越南现行法律规定执行。",
+      "履行过程中如有问题，双方本着合作与诚信精神协商解决；无法协商解决的争议，提交有管辖权的人民法院解决。",
+      "本合同自双方签署之日起生效，双方全面履行合同规定的义务和责任后自动清算终止，无需另行签署清算文件，但一方书面要求的除外。",
+      "本合同一式2（贰）份，具有同等法律效力，双方各执1（壹）份。",
+    ],
+
+    sigA: "甲方代表",
+    sigB: "乙方代表",
+    sigNote: "（签名、姓名、盖章）",
+    translationDisclaimer: "本译文仅供参考，越南语版本为具有正式法律效力的文本。",
+  },
+};
+
+function t(lang, key) {
+  const dict = I18N[lang] || I18N.vi;
+  return dict[key] !== undefined ? dict[key] : I18N.vi[key];
+}
+
+/* ===== charts.js ===== */
+function setupCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const height = rect.height || Number(canvas.getAttribute("height")) || 220;
+  canvas.style.height = height + "px";
+  canvas.width = rect.width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, width: rect.width, height };
+}
+
+function roundRectTop(ctx, x, y, w, h, r) {
+  if (h <= 0.5) return;
+  const rr = Math.min(r, w / 2, h);
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x, y + rr);
+  ctx.arcTo(x, y, x + rr, y, rr);
+  ctx.lineTo(x + w - rr, y);
+  ctx.arcTo(x + w, y, x + w, y + rr, rr);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+}
+
+function drawBarChart(canvas, labels, values, { color = "#2563eb", formatValue } = {}) {
+  const { ctx, width, height } = setupCanvas(canvas);
+  const padding = { top: 16, right: 12, bottom: 26, left: 54 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+  const max = Math.max(1, ...values);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.font = "11px system-ui, sans-serif";
+  ctx.fillStyle = "#94a3b8";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+
+  const steps = 4;
+  for (let i = 0; i <= steps; i++) {
+    const y = padding.top + chartH - (chartH / steps) * i;
+    const val = (max / steps) * i;
+    ctx.strokeStyle = "#eef2f7";
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText(formatValue ? formatValue(val) : String(Math.round(val)), padding.left - 8, y);
+  }
+
+  const gap = chartW / values.length;
+  const barW = Math.min(36, gap * 0.55);
+  ctx.textAlign = "center";
+  values.forEach((v, i) => {
+    const x = padding.left + gap * i + (gap - barW) / 2;
+    const h = max === 0 ? 0 : (v / max) * chartH;
+    const y = padding.top + chartH - h;
+    ctx.fillStyle = color;
+    roundRectTop(ctx, x, y, barW, h, 4);
+    ctx.fill();
+    ctx.fillStyle = "#64748b";
+    ctx.font = "11px system-ui, sans-serif";
+    ctx.fillText(labels[i], x + barW / 2, padding.top + chartH + 16);
+  });
+}
+
+function drawDonutChart(canvas, segments) {
+  const { ctx, width, height } = setupCanvas(canvas);
+  ctx.clearRect(0, 0, width, height);
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+  const legendW = 150;
+  const cx = Math.min((width - legendW) / 2, height / 2);
+  const cy = height / 2;
+  const radius = Math.max(30, Math.min(cx, cy) - 8);
+  const inner = radius * 0.62;
+
+  if (total === 0) {
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = radius - inner;
+    ctx.beginPath();
+    ctx.arc(cx, cy, (radius + inner) / 2, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    let start = -Math.PI / 2;
+    segments.forEach((seg) => {
+      if (seg.value <= 0) return;
+      const angle = (seg.value / total) * Math.PI * 2;
+      ctx.fillStyle = seg.color;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius, start, start + angle);
+      ctx.closePath();
+      ctx.fill();
+      start += angle;
+    });
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(cx, cy, inner, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.font = "12px system-ui, sans-serif";
+  let ly = cy - (segments.length * 20) / 2 + 10;
+  segments.forEach((seg) => {
+    ctx.fillStyle = seg.color;
+    ctx.fillRect(cx + radius + 16, ly - 5, 10, 10);
+    ctx.fillStyle = "#334155";
+    ctx.fillText(`${seg.label} (${seg.value})`, cx + radius + 32, ly);
+    ly += 20;
+  });
+}
+
+/* ===== store.js ===== */
+const KEYS = {
+  clients: "cms_clients",
+  contracts: "cms_contracts",
+  quotes: "cms_quotes",
+  settings: "cms_settings",
+  seq: "cms_seq",
+};
+
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    console.error("Lỗi đọc dữ liệu", key, e);
+    return fallback;
+  }
+}
+
+function save(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+const defaultSettings = {
+  companyName: "Công ty TNHH Dịch Vụ Tư Vấn Doanh Nghiệp Việt",
+  companyAddress: "Số 15, ngõ 12 phố Phan Đình Giót, phường Phương Liệt, TP. Hà Nội",
+  companyPhone: "0966 863 672 / 0842 001 236",
+  companyEmail: "sales@vietconsulting.org",
+  companyTaxCode: "0109499676",
+  repName: "Lê Thị Thắm",
+  repTitle: "Giám đốc",
+  bankAccountName: "CÔNG TY TNHH DỊCH VỤ TƯ VẤN DOANH NGHIỆP VIỆT",
+  bankAccountNumber: "510108386",
+  bankName: "MB Bank – Ngân hàng Quân đội – chi nhánh Thanh Xuân",
+  reminderDays: 30,
+};
+
+const Store = {
+  // Clients
+  getClients() { return load(KEYS.clients, []); },
+  saveClients(list) { save(KEYS.clients, list); },
+  addClient(data) {
+    const list = this.getClients();
+    const item = { id: uid(), createdAt: new Date().toISOString(), ...data };
+    list.push(item);
+    this.saveClients(list);
+    return item;
+  },
+  updateClient(id, patch) {
+    const list = this.getClients();
+    const idx = list.findIndex((c) => c.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...patch };
+    this.saveClients(list);
+    return list[idx];
+  },
+  deleteClient(id) {
+    this.saveClients(this.getClients().filter((c) => c.id !== id));
+  },
+  getClient(id) { return this.getClients().find((c) => c.id === id) || null; },
+
+  // Contracts
+  getContracts() { return load(KEYS.contracts, []); },
+  saveContracts(list) { save(KEYS.contracts, list); },
+  addContract(data) {
+    const list = this.getContracts();
+    const item = { id: uid(), payments: [], createdAt: new Date().toISOString(), ...data };
+    list.push(item);
+    this.saveContracts(list);
+    return item;
+  },
+  updateContract(id, patch) {
+    const list = this.getContracts();
+    const idx = list.findIndex((c) => c.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...patch };
+    this.saveContracts(list);
+    return list[idx];
+  },
+  deleteContract(id) {
+    this.saveContracts(this.getContracts().filter((c) => c.id !== id));
+  },
+  getContract(id) { return this.getContracts().find((c) => c.id === id) || null; },
+
+  // Quotes
+  getQuotes() { return load(KEYS.quotes, []); },
+  saveQuotes(list) { save(KEYS.quotes, list); },
+  addQuote(data) {
+    const list = this.getQuotes();
+    const item = { id: uid(), createdAt: new Date().toISOString(), ...data };
+    list.push(item);
+    this.saveQuotes(list);
+    return item;
+  },
+  updateQuote(id, patch) {
+    const list = this.getQuotes();
+    const idx = list.findIndex((q) => q.id === id);
+    if (idx === -1) return null;
+    list[idx] = { ...list[idx], ...patch };
+    this.saveQuotes(list);
+    return list[idx];
+  },
+  deleteQuote(id) {
+    this.saveQuotes(this.getQuotes().filter((q) => q.id !== id));
+  },
+  getQuote(id) { return this.getQuotes().find((q) => q.id === id) || null; },
+
+  // Settings
+  getSettings() { return { ...defaultSettings, ...load(KEYS.settings, {}) }; },
+  saveSettings(data) { save(KEYS.settings, { ...this.getSettings(), ...data }); },
+
+  // Auto document codes, e.g. HD-2026-001
+  nextCode(prefix) {
+    const seq = load(KEYS.seq, {});
+    const year = new Date().getFullYear();
+    const key = `${prefix}-${year}`;
+    const next = (seq[key] || 0) + 1;
+    seq[key] = next;
+    save(KEYS.seq, seq);
+    return `${prefix}-${year}-${String(next).padStart(3, "0")}`;
+  },
+
+  // Backup / restore
+  exportAll() {
+    return {
+      clients: this.getClients(),
+      contracts: this.getContracts(),
+      quotes: this.getQuotes(),
+      settings: this.getSettings(),
+      exportedAt: new Date().toISOString(),
+    };
+  },
+  importAll(data) {
+    if (data.clients) this.saveClients(data.clients);
+    if (data.contracts) this.saveContracts(data.contracts);
+    if (data.quotes) this.saveQuotes(data.quotes);
+    if (data.settings) this.saveSettings(data.settings);
+  },
+  clearAll() {
+    Object.values(KEYS).forEach((k) => localStorage.removeItem(k));
+  },
+};
+
+/* ===== main.js ===== */
+const STATUS_CONTRACT = {
+  draft: { label: "Nháp", color: "#64748b" },
+  active: { label: "Đang thực hiện", color: "#2563eb" },
+  completed: { label: "Hoàn thành", color: "#16a34a" },
+  cancelled: { label: "Đã hủy", color: "#dc2626" },
+};
+
+const STATUS_QUOTE = {
+  draft: { label: "Nháp", color: "#64748b" },
+  sent: { label: "Đã gửi", color: "#2563eb" },
+  accepted: { label: "Chấp nhận", color: "#16a34a" },
+  rejected: { label: "Từ chối", color: "#dc2626" },
+  converted: { label: "Đã thành HĐ", color: "#7c3aed" },
+};
+
+const state = {
+  view: "dashboard",
+  contractSearch: "",
+  contractStatus: "all",
+  clientSearch: "",
+  quoteSearch: "",
+  quoteStatus: "all",
+  reportYear: new Date().getFullYear(),
+};
+
+/* ---------------- Navigation ---------------- */
+function setView(view) {
+  state.view = view;
+  document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${view}`));
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  switch (state.view) {
+    case "dashboard": return renderDashboard();
+    case "contracts": return renderContracts();
+    case "clients": return renderClients();
+    case "quotes": return renderQuotes();
+    case "reports": return renderReports();
+    case "settings": return renderSettings();
+  }
+}
+
+document.querySelectorAll(".nav-item").forEach((btn) => {
+  btn.addEventListener("click", () => setView(btn.dataset.view));
+});
+
+/* ---------------- Modal helper ---------------- */
+const modalRoot = document.getElementById("modal-root");
+let escListener = null;
+
+function closeModal() {
+  modalRoot.innerHTML = "";
+  if (escListener) { document.removeEventListener("keydown", escListener); escListener = null; }
+}
+
+function openModal({ title, bodyHtml, footerHtml = "", onMount, wide = false }) {
+  modalRoot.innerHTML = `
+    <div class="modal-overlay">
+      <div class="modal-dialog ${wide ? "wide" : ""}">
+        <div class="modal-header">
+          <h3>${title}</h3>
+          <button class="icon-btn" data-close>&times;</button>
+        </div>
+        <div class="modal-body">${bodyHtml}</div>
+        ${footerHtml ? `<div class="modal-footer">${footerHtml}</div>` : ""}
+      </div>
+    </div>`;
+  const overlay = modalRoot.querySelector(".modal-overlay");
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+  modalRoot.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", closeModal));
+  escListener = (e) => { if (e.key === "Escape") closeModal(); };
+  document.addEventListener("keydown", escListener);
+  if (onMount) onMount(modalRoot.querySelector(".modal-dialog"));
+}
+
+/* ---------------- Language picker ---------------- */
+function pickLanguageThen(onPick) {
+  openModal({
+    title: "Chọn ngôn ngữ in / Select print language",
+    bodyHtml: `
+      <div class="lang-grid">
+        ${LANGS.map((l) => `<button type="button" class="btn lang-btn" data-lang="${l.code}">${l.name}</button>`).join("")}
+      </div>
+      <p class="hint" style="margin-top:12px">Nội dung do bạn tự nhập (mô tả, ghi chú...) sẽ giữ nguyên ngôn ngữ đã nhập; chỉ nhãn/điều khoản chuẩn được dịch.</p>
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button>`,
+    onMount: () => {
+      modalRoot.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => {
+        const lang = b.dataset.lang;
+        closeModal();
+        onPick(lang);
+      }));
+    },
+  });
+}
+
+/* ---------------- Shared helpers ---------------- */
+function clientOptions(selectedId) {
+  const clients = Store.getClients().slice().sort((a, b) => a.name.localeCompare(b.name, "vi"));
+  if (clients.length === 0) return `<option value="">— Chưa có khách hàng —</option>`;
+  return clients.map((c) => `<option value="${c.id}" ${c.id === selectedId ? "selected" : ""}>${escapeHtml(c.name)}${c.company ? ` (${escapeHtml(c.company)})` : ""}</option>`).join("");
+}
+
+function statCard(label, value, tone) {
+  return `<div class="stat-card tone-${tone}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>`;
+}
+
+function monthLabels() { return Array.from({ length: 12 }, (_, i) => `T${i + 1}`); }
+
+function monthlyRevenue(contracts, year) {
+  const arr = new Array(12).fill(0);
+  contracts.forEach((c) => (c.payments || []).forEach((p) => {
+    if (p.paidDate) {
+      const d = new Date(p.paidDate);
+      if (d.getFullYear() === year) arr[d.getMonth()] += Number(p.amount || 0);
+    }
+  }));
+  return arr;
+}
+
+function quoteTotal(q) {
+  const sub = (q.items || []).reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0);
+  const discount = sub * (Number(q.discountPct || 0) / 100);
+  const afterDiscount = sub - discount;
+  const tax = afterDiscount * (Number(q.taxPct || 0) / 100);
+  return { sub, discount, tax, total: afterDiscount + tax };
+}
+
+/* ================= DASHBOARD ================= */
+function renderDashboard() {
+  const el = document.getElementById("view-dashboard");
+  const contracts = Store.getContracts();
+  const settings = Store.getSettings();
+
+  const activeContracts = contracts.filter((c) => c.status === "active");
+  const totalValue = contracts.filter((c) => c.status !== "cancelled").reduce((s, c) => s + Number(c.value || 0), 0);
+  const totalPaid = contracts.reduce((s, c) => s + (c.payments || []).filter((p) => p.paidDate).reduce((s2, p) => s2 + Number(p.amount || 0), 0), 0);
+  const totalOutstanding = Math.max(0, totalValue - totalPaid);
+
+  const expiringSoon = activeContracts
+    .filter((c) => { const d = daysUntil(c.endDate); return d !== null && d >= 0 && d <= (settings.reminderDays || 30); })
+    .sort((a, b) => daysUntil(a.endDate) - daysUntil(b.endDate));
+  const overdueContracts = activeContracts.filter((c) => { const d = daysUntil(c.endDate); return d !== null && d < 0; });
+
+  const overduePayments = [];
+  contracts.forEach((c) => (c.payments || []).forEach((p) => {
+    if (!p.paidDate && p.dueDate && daysUntil(p.dueDate) < 0) overduePayments.push({ contract: c, payment: p });
+  }));
+
+  el.innerHTML = `
+    <div class="page-header"><h2>Tổng quan</h2><p class="muted">Tình hình hợp đồng tư vấn của bạn.</p></div>
+    <div class="stat-grid">
+      ${statCard("Tổng hợp đồng", contracts.length, "blue")}
+      ${statCard("Đang thực hiện", activeContracts.length, "indigo")}
+      ${statCard("Tổng giá trị", formatCurrency(totalValue), "green")}
+      ${statCard("Đã thu", formatCurrency(totalPaid), "teal")}
+      ${statCard("Còn phải thu", formatCurrency(totalOutstanding), "amber")}
+      ${statCard("Sắp / đã hết hạn", expiringSoon.length + overdueContracts.length, "red")}
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Doanh thu theo tháng (${new Date().getFullYear()})</h3>
+        <canvas id="chart-revenue" height="220"></canvas>
+      </div>
+      <div class="card">
+        <h3>Hợp đồng theo trạng thái</h3>
+        <canvas id="chart-status" height="220"></canvas>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>⏰ Hợp đồng sắp / đã hết hạn</h3>
+        ${renderAlertList([...expiringSoon.map((c) => alertRowContract(c, false)), ...overdueContracts.map((c) => alertRowContract(c, true))])}
+      </div>
+      <div class="card">
+        <h3>💸 Thanh toán quá hạn</h3>
+        ${renderAlertList(overduePayments.map(({ contract, payment }) => alertRowPayment(contract, payment)))}
+      </div>
+    </div>
+  `;
+
+  drawBarChart(document.getElementById("chart-revenue"), monthLabels(), monthlyRevenue(contracts, new Date().getFullYear()), { formatValue: (v) => (v / 1e6).toFixed(0) + "tr" });
+  drawDonutChart(document.getElementById("chart-status"), Object.entries(STATUS_CONTRACT).map(([key, meta]) => ({ label: meta.label, value: contracts.filter((c) => c.status === key).length, color: meta.color })));
+}
+
+function renderAlertList(rows) {
+  if (rows.length === 0) return `<p class="empty">Không có cảnh báo nào 🎉</p>`;
+  return `<ul class="alert-list">${rows.join("")}</ul>`;
+}
+
+function alertRowContract(c, overdue) {
+  const d = daysUntil(c.endDate);
+  const client = Store.getClient(c.clientId);
+  return `<li class="alert-item ${overdue ? "danger" : "warning"}">
+    <div><strong>${escapeHtml(c.code)}</strong> — ${escapeHtml(client ? client.name : "")}
+    <div class="muted small">${escapeHtml(c.title || "")}</div></div>
+    <span class="badge ${overdue ? "badge-red" : "badge-amber"}">${overdue ? `Quá hạn ${Math.abs(d)} ngày` : `Còn ${d} ngày`}</span>
+  </li>`;
+}
+
+function alertRowPayment(contract, payment) {
+  const client = Store.getClient(contract.clientId);
+  const d = daysUntil(payment.dueDate);
+  return `<li class="alert-item danger">
+    <div><strong>${escapeHtml(contract.code)}</strong> — ${escapeHtml(client ? client.name : "")}
+    <div class="muted small">Đợt thanh toán ${formatCurrency(payment.amount)}</div></div>
+    <span class="badge badge-red">Quá hạn ${Math.abs(d)} ngày</span>
+  </li>`;
+}
+
+/* ================= CONTRACTS ================= */
+function renderContracts() {
+  const el = document.getElementById("view-contracts");
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Hợp đồng</h2><p class="muted">Quản lý toàn bộ hợp đồng tư vấn</p></div>
+      <button class="btn btn-primary" id="btn-add-contract">+ Thêm hợp đồng</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="contract-search" placeholder="Tìm theo mã, tiêu đề, khách hàng..." value="${escapeHtml(state.contractSearch)}" />
+      <select id="contract-status-filter">
+        <option value="all">Tất cả trạng thái</option>
+        ${Object.entries(STATUS_CONTRACT).map(([k, m]) => `<option value="${k}" ${state.contractStatus === k ? "selected" : ""}>${m.label}</option>`).join("")}
+      </select>
+    </div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Mã HĐ</th><th>Khách hàng</th><th>Tiêu đề</th><th>Giá trị</th><th>Bắt đầu</th><th>Kết thúc</th><th>Trạng thái</th><th>Thu / Còn lại</th><th></th></tr></thead>
+      <tbody id="contracts-tbody"></tbody>
+    </table></div>
+  `;
+  document.getElementById("btn-add-contract").addEventListener("click", () => openContractForm());
+  document.getElementById("contract-search").addEventListener("input", (e) => { state.contractSearch = e.target.value; renderContractsTable(); });
+  document.getElementById("contract-status-filter").addEventListener("change", (e) => { state.contractStatus = e.target.value; renderContractsTable(); });
+  renderContractsTable();
+}
+
+function renderContractsTable() {
+  const tbody = document.getElementById("contracts-tbody");
+  if (!tbody) return;
+  let contracts = Store.getContracts();
+  const q = state.contractSearch.trim().toLowerCase();
+  contracts = contracts.filter((c) => {
+    const client = Store.getClient(c.clientId);
+    const hay = `${c.code} ${c.title} ${client ? client.name : ""}`.toLowerCase();
+    const matchQ = !q || hay.includes(q);
+    const matchStatus = state.contractStatus === "all" || c.status === state.contractStatus;
+    return matchQ && matchStatus;
+  });
+  contracts.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+  if (contracts.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="empty">Chưa có hợp đồng nào phù hợp</td></tr>`; return; }
+
+  tbody.innerHTML = contracts.map((c) => {
+    const client = Store.getClient(c.clientId);
+    const paid = (c.payments || []).filter((p) => p.paidDate).reduce((s, p) => s + Number(p.amount || 0), 0);
+    const remain = Math.max(0, Number(c.value || 0) - paid);
+    const d = daysUntil(c.endDate);
+    const meta = STATUS_CONTRACT[c.status] || { label: c.status, color: "#64748b" };
+    let statusBadge = `<span class="badge" style="background:${meta.color}22;color:${meta.color}">${meta.label}</span>`;
+    if (c.status === "active" && d !== null && d < 0) statusBadge += ` <span class="badge badge-red">Quá hạn</span>`;
+    else if (c.status === "active" && d !== null && d <= 30) statusBadge += ` <span class="badge badge-amber">Còn ${d} ngày</span>`;
+    return `<tr>
+      <td>${escapeHtml(c.code)}</td>
+      <td>${escapeHtml(client ? client.name : "—")}</td>
+      <td>${escapeHtml(c.title || "")}</td>
+      <td>${formatCurrency(c.value)}</td>
+      <td>${formatDate(c.startDate)}</td>
+      <td>${formatDate(c.endDate)}</td>
+      <td>${statusBadge}</td>
+      <td>${formatCurrency(paid)} / <span class="muted">${formatCurrency(remain)}</span></td>
+      <td class="actions">
+        <button class="icon-btn" data-view-id="${c.id}" title="Xem chi tiết">👁</button>
+        <button class="icon-btn" data-print-id="${c.id}" title="In hợp đồng">🖨</button>
+        <button class="icon-btn" data-edit-id="${c.id}" title="Sửa">✎</button>
+        <button class="icon-btn danger" data-del-id="${c.id}" title="Xóa">🗑</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll("[data-view-id]").forEach((b) => b.addEventListener("click", () => openContractDetail(b.dataset.viewId)));
+  tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => pickLanguageThen((lang) => printContract(b.dataset.printId, lang))));
+  tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openContractForm(b.dataset.editId)));
+  tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (confirm("Xóa hợp đồng này? Hành động không thể hoàn tác.")) { Store.deleteContract(b.dataset.delId); renderContractsTable(); }
+  }));
+}
+
+function openContractForm(id, prefill, onSaved) {
+  const editing = id ? Store.getContract(id) : null;
+  const data = editing || prefill || {};
+  openModal({
+    title: editing ? "Sửa hợp đồng" : "Thêm hợp đồng",
+    wide: true,
+    bodyHtml: `
+      <form id="contract-form" class="form-grid">
+        <label>Khách hàng
+          <select name="clientId" required>${clientOptions(data.clientId)}</select>
+        </label>
+        <label>Tiêu đề hợp đồng
+          <input name="title" required value="${escapeHtml(data.title || "")}" placeholder="VD: Tư vấn chiến lược kinh doanh Q3" />
+        </label>
+        <label class="col-span-2">Mô tả / phạm vi công việc
+          <textarea name="description" rows="2">${escapeHtml(data.description || "")}</textarea>
+        </label>
+        <label class="col-span-2">Địa điểm thực hiện (tùy chọn)
+          <input name="location" value="${escapeHtml(data.location || "")}" placeholder="Để trống nếu thực hiện tại địa chỉ khách hàng" />
+        </label>
+        <label>Ngày ký
+          <input type="date" name="signDate" value="${data.signDate || todayISO()}" />
+        </label>
+        <label>Ngày bắt đầu
+          <input type="date" name="startDate" value="${data.startDate || todayISO()}" required />
+        </label>
+        <label>Ngày kết thúc
+          <input type="date" name="endDate" value="${data.endDate || ""}" required />
+        </label>
+        <label>Giá trị hợp đồng (đ)
+          <input type="number" name="value" min="0" step="1000" value="${data.value ?? ""}" required />
+        </label>
+        <label>Trạng thái
+          <select name="status">${Object.entries(STATUS_CONTRACT).map(([k, m]) => `<option value="${k}" ${data.status ? (data.status === k ? "selected" : "") : (k === "draft" ? "selected" : "")}>${m.label}</option>`).join("")}</select>
+        </label>
+        <label class="col-span-2">Ghi chú
+          <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
+        </label>
+      </form>
+      ${Store.getClients().length === 0 ? '<p class="hint">Bạn chưa có khách hàng nào. Hãy vào mục Khách hàng để thêm trước.</p>' : ""}
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="contract-save">${editing ? "Lưu thay đổi" : "Tạo hợp đồng"}</button>`,
+    onMount: () => {
+      document.getElementById("contract-save").addEventListener("click", () => {
+        const form = document.getElementById("contract-form");
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        payload.value = Number(payload.value);
+        let saved;
+        if (editing) {
+          saved = Store.updateContract(editing.id, payload);
+        } else {
+          payload.code = Store.nextCode("HD");
+          payload.payments = prefill?.payments || [];
+          saved = Store.addContract(payload);
+        }
+        closeModal();
+        if (onSaved) onSaved(saved);
+        renderCurrentView();
+      });
+    },
+  });
+}
+
+function openContractDetail(id) {
+  const c = Store.getContract(id);
+  if (!c) return;
+  const client = Store.getClient(c.clientId);
+  const paid = (c.payments || []).filter((p) => p.paidDate).reduce((s, p) => s + Number(p.amount || 0), 0);
+  const remain = Math.max(0, Number(c.value || 0) - paid);
+  openModal({
+    title: `Chi tiết hợp đồng ${c.code}`,
+    wide: true,
+    bodyHtml: `
+      <div class="detail-grid">
+        <div><span class="muted">Khách hàng</span><div>${escapeHtml(client ? client.name : "—")}${client?.company ? ` (${escapeHtml(client.company)})` : ""}</div></div>
+        <div><span class="muted">Trạng thái</span><div>${STATUS_CONTRACT[c.status]?.label || c.status}</div></div>
+        <div><span class="muted">Ngày ký</span><div>${formatDate(c.signDate)}</div></div>
+        <div><span class="muted">Thời hạn</span><div>${formatDate(c.startDate)} — ${formatDate(c.endDate)}</div></div>
+        <div><span class="muted">Giá trị</span><div>${formatCurrency(c.value)}</div></div>
+        <div><span class="muted">Đã thu / Còn lại</span><div>${formatCurrency(paid)} / ${formatCurrency(remain)}</div></div>
+      </div>
+      ${c.description ? `<p><span class="muted">Mô tả:</span> ${escapeHtml(c.description)}</p>` : ""}
+      ${c.note ? `<p><span class="muted">Ghi chú:</span> ${escapeHtml(c.note)}</p>` : ""}
+      <div class="row" style="margin-top:16px;align-items:center;">
+        <h4 style="margin:0">Lịch thanh toán</h4>
+        <button class="btn btn-sm" id="btn-add-payment">+ Thêm đợt thanh toán</button>
+      </div>
+      <div class="table-wrap"><table class="data-table">
+        <thead><tr><th>Hạn thanh toán</th><th>Số tiền</th><th>Trạng thái</th><th>Ngày thu</th><th></th></tr></thead>
+        <tbody id="payments-tbody"></tbody>
+      </table></div>
+    `,
+    footerHtml: `<button class="btn" data-close>Đóng</button><button class="btn btn-primary" id="btn-print-contract">🖨 In hợp đồng</button>`,
+    onMount: () => {
+      renderPaymentsTbody(c.id);
+      document.getElementById("btn-add-payment").addEventListener("click", () => openPaymentForm(c.id));
+      document.getElementById("btn-print-contract").addEventListener("click", () => pickLanguageThen((lang) => printContract(c.id, lang)));
+    },
+  });
+}
+
+function renderPaymentsTbody(contractId) {
+  const c = Store.getContract(contractId);
+  const tbody = document.getElementById("payments-tbody");
+  if (!tbody || !c) return;
+  const payments = (c.payments || []).slice().sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
+  if (payments.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="empty">Chưa có đợt thanh toán nào</td></tr>`; return; }
+  tbody.innerHTML = payments.map((p) => {
+    const overdue = !p.paidDate && p.dueDate && daysUntil(p.dueDate) < 0;
+    const status = p.paidDate ? `<span class="badge badge-green">Đã thu</span>` : overdue ? `<span class="badge badge-red">Quá hạn</span>` : `<span class="badge badge-amber">Chưa thu</span>`;
+    return `<tr>
+      <td>${formatDate(p.dueDate)}</td>
+      <td>${formatCurrency(p.amount)}</td>
+      <td>${status}</td>
+      <td>${formatDate(p.paidDate)}</td>
+      <td class="actions">
+        ${!p.paidDate ? `<button class="icon-btn" data-mark-paid="${p.id}" title="Đánh dấu đã thu">✔</button>` : ""}
+        <button class="icon-btn danger" data-del-payment="${p.id}" title="Xóa">🗑</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll("[data-mark-paid]").forEach((b) => b.addEventListener("click", () => {
+    const c2 = Store.getContract(contractId);
+    const payments2 = c2.payments.map((p) => (p.id === b.dataset.markPaid ? { ...p, paidDate: todayISO() } : p));
+    Store.updateContract(contractId, { payments: payments2 });
+    renderPaymentsTbody(contractId);
+    if (state.view === "contracts") renderContractsTable();
+  }));
+  tbody.querySelectorAll("[data-del-payment]").forEach((b) => b.addEventListener("click", () => {
+    if (!confirm("Xóa đợt thanh toán này?")) return;
+    const c2 = Store.getContract(contractId);
+    Store.updateContract(contractId, { payments: c2.payments.filter((p) => p.id !== b.dataset.delPayment) });
+    renderPaymentsTbody(contractId);
+    if (state.view === "contracts") renderContractsTable();
+  }));
+}
+
+function openPaymentForm(contractId) {
+  openModal({
+    title: "Thêm đợt thanh toán",
+    bodyHtml: `
+      <form id="payment-form" class="form-grid">
+        <label>Hạn thanh toán
+          <input type="date" name="dueDate" value="${todayISO()}" required />
+        </label>
+        <label>Số tiền (đ)
+          <input type="number" name="amount" min="0" step="1000" required />
+        </label>
+        <label class="col-span-2">Ghi chú
+          <input name="note" />
+        </label>
+        <label class="col-span-2"><input type="checkbox" name="paidNow" style="width:auto" /> Đã thu ngay hôm nay</label>
+      </form>
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="payment-save">Lưu</button>`,
+    onMount: () => {
+      document.getElementById("payment-save").addEventListener("click", () => {
+        const form = document.getElementById("payment-form");
+        if (!form.reportValidity()) return;
+        const fd = new FormData(form);
+        const c = Store.getContract(contractId);
+        const payment = {
+          id: uid(),
+          dueDate: fd.get("dueDate"),
+          amount: Number(fd.get("amount")),
+          note: fd.get("note") || "",
+          paidDate: fd.get("paidNow") ? todayISO() : null,
+        };
+        Store.updateContract(contractId, { payments: [...(c.payments || []), payment] });
+        closeModal();
+        openContractDetail(contractId);
+      });
+    },
+  });
+}
+
+/* ================= CLIENTS ================= */
+function renderClients() {
+  const el = document.getElementById("view-clients");
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Khách hàng</h2><p class="muted">Danh sách khách hàng sử dụng dịch vụ tư vấn</p></div>
+      <button class="btn btn-primary" id="btn-add-client">+ Thêm khách hàng</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="client-search" placeholder="Tìm theo tên, công ty, SĐT, email..." value="${escapeHtml(state.clientSearch)}" />
+    </div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Tên</th><th>Công ty</th><th>SĐT</th><th>Email</th><th>Số HĐ</th><th>Tổng giá trị</th><th></th></tr></thead>
+      <tbody id="clients-tbody"></tbody>
+    </table></div>
+  `;
+  document.getElementById("btn-add-client").addEventListener("click", () => openClientForm());
+  document.getElementById("client-search").addEventListener("input", (e) => { state.clientSearch = e.target.value; renderClientsTable(); });
+  renderClientsTable();
+}
+
+function renderClientsTable() {
+  const tbody = document.getElementById("clients-tbody");
+  if (!tbody) return;
+  let clients = Store.getClients();
+  const q = state.clientSearch.trim().toLowerCase();
+  if (q) clients = clients.filter((c) => `${c.name} ${c.company || ""} ${c.phone || ""} ${c.email || ""}`.toLowerCase().includes(q));
+  clients.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+
+  if (clients.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="empty">Chưa có khách hàng nào</td></tr>`; return; }
+
+  const contracts = Store.getContracts();
+  const quotes = Store.getQuotes();
+  tbody.innerHTML = clients.map((c) => {
+    const cs = contracts.filter((k) => k.clientId === c.id);
+    const total = cs.reduce((s, k) => s + Number(k.value || 0), 0);
+    return `<tr>
+      <td>${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.company || "—")}</td>
+      <td>${escapeHtml(c.phone || "—")}</td>
+      <td>${escapeHtml(c.email || "—")}</td>
+      <td>${cs.length}</td>
+      <td>${formatCurrency(total)}</td>
+      <td class="actions">
+        <button class="icon-btn" data-edit-id="${c.id}" title="Sửa">✎</button>
+        <button class="icon-btn danger" data-del-id="${c.id}" title="Xóa">🗑</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openClientForm(b.dataset.editId)));
+  tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    const used = contracts.some((k) => k.clientId === b.dataset.delId) || quotes.some((qt) => qt.clientId === b.dataset.delId);
+    if (used) { alert("Không thể xóa: khách hàng đang có hợp đồng hoặc báo giá liên quan."); return; }
+    if (confirm("Xóa khách hàng này?")) { Store.deleteClient(b.dataset.delId); renderClientsTable(); }
+  }));
+}
+
+function openClientForm(id) {
+  const editing = id ? Store.getClient(id) : null;
+  const data = editing || {};
+  openModal({
+    title: editing ? "Sửa khách hàng" : "Thêm khách hàng",
+    bodyHtml: `
+      <form id="client-form" class="form-grid">
+        <label>Họ tên / Người liên hệ
+          <input name="name" required value="${escapeHtml(data.name || "")}" />
+        </label>
+        <label>Công ty
+          <input name="company" value="${escapeHtml(data.company || "")}" />
+        </label>
+        <label>Số điện thoại
+          <input name="phone" value="${escapeHtml(data.phone || "")}" />
+        </label>
+        <label>Email
+          <input type="email" name="email" value="${escapeHtml(data.email || "")}" />
+        </label>
+        <label>Mã số thuế
+          <input name="taxCode" value="${escapeHtml(data.taxCode || "")}" />
+        </label>
+        <label>Số lao động (nếu có)
+          <input type="number" min="0" name="employeeCount" value="${escapeHtml(data.employeeCount || "")}" />
+        </label>
+        <label class="col-span-2">Địa chỉ
+          <input name="address" value="${escapeHtml(data.address || "")}" />
+        </label>
+        <label>Người đại diện (dùng khi lập hợp đồng)
+          <input name="repName" value="${escapeHtml(data.repName || "")}" placeholder="VD: Ông Nguyễn Văn A" />
+        </label>
+        <label>Chức danh người đại diện
+          <input name="repTitle" value="${escapeHtml(data.repTitle || "")}" placeholder="VD: Giám đốc" />
+        </label>
+        <label class="col-span-2">Ghi chú
+          <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
+        </label>
+      </form>
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="client-save">${editing ? "Lưu thay đổi" : "Thêm khách hàng"}</button>`,
+    onMount: () => {
+      document.getElementById("client-save").addEventListener("click", () => {
+        const form = document.getElementById("client-form");
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        if (editing) Store.updateClient(editing.id, payload); else Store.addClient(payload);
+        closeModal();
+        renderCurrentView();
+      });
+    },
+  });
+}
+
+/* ================= QUOTES ================= */
+function renderQuotes() {
+  const el = document.getElementById("view-quotes");
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Báo giá</h2><p class="muted">Lập báo giá dịch vụ tư vấn gửi khách hàng</p></div>
+      <button class="btn btn-primary" id="btn-add-quote">+ Tạo báo giá</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="quote-search" placeholder="Tìm theo mã, khách hàng..." value="${escapeHtml(state.quoteSearch)}" />
+      <select id="quote-status-filter">
+        <option value="all">Tất cả trạng thái</option>
+        ${Object.entries(STATUS_QUOTE).map(([k, m]) => `<option value="${k}" ${state.quoteStatus === k ? "selected" : ""}>${m.label}</option>`).join("")}
+      </select>
+    </div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Mã BG</th><th>Khách hàng</th><th>Ngày</th><th>Hiệu lực đến</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr></thead>
+      <tbody id="quotes-tbody"></tbody>
+    </table></div>
+  `;
+  document.getElementById("btn-add-quote").addEventListener("click", () => openQuoteForm());
+  document.getElementById("quote-search").addEventListener("input", (e) => { state.quoteSearch = e.target.value; renderQuotesTable(); });
+  document.getElementById("quote-status-filter").addEventListener("change", (e) => { state.quoteStatus = e.target.value; renderQuotesTable(); });
+  renderQuotesTable();
+}
+
+function renderQuotesTable() {
+  const tbody = document.getElementById("quotes-tbody");
+  if (!tbody) return;
+  let quotes = Store.getQuotes();
+  const q = state.quoteSearch.trim().toLowerCase();
+  quotes = quotes.filter((qt) => {
+    const client = Store.getClient(qt.clientId);
+    const hay = `${qt.code} ${client ? client.name : ""}`.toLowerCase();
+    const matchQ = !q || hay.includes(q);
+    const matchStatus = state.quoteStatus === "all" || qt.status === state.quoteStatus;
+    return matchQ && matchStatus;
+  });
+  quotes.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+
+  if (quotes.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="empty">Chưa có báo giá nào</td></tr>`; return; }
+
+  tbody.innerHTML = quotes.map((qt) => {
+    const client = Store.getClient(qt.clientId);
+    const { total } = quoteTotal(qt);
+    const meta = STATUS_QUOTE[qt.status] || { label: qt.status, color: "#64748b" };
+    return `<tr>
+      <td>${escapeHtml(qt.code)}</td>
+      <td>${escapeHtml(client ? client.name : "—")}</td>
+      <td>${formatDate(qt.date)}</td>
+      <td>${formatDate(qt.validUntil)}</td>
+      <td>${formatCurrency(total)}</td>
+      <td><span class="badge" style="background:${meta.color}22;color:${meta.color}">${meta.label}</span></td>
+      <td class="actions">
+        <button class="icon-btn" data-print-id="${qt.id}" title="In / Xem">🖨</button>
+        <button class="icon-btn" data-edit-id="${qt.id}" title="Sửa">✎</button>
+        ${qt.status !== "converted" ? `<button class="icon-btn" data-convert-id="${qt.id}" title="Chuyển thành hợp đồng">➜</button>` : ""}
+        <button class="icon-btn danger" data-del-id="${qt.id}" title="Xóa">🗑</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => pickLanguageThen((lang) => printQuote(b.dataset.printId, lang))));
+  tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openQuoteForm(b.dataset.editId)));
+  tbody.querySelectorAll("[data-convert-id]").forEach((b) => b.addEventListener("click", () => convertQuoteToContract(b.dataset.convertId)));
+  tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (confirm("Xóa báo giá này?")) { Store.deleteQuote(b.dataset.delId); renderQuotesTable(); }
+  }));
+}
+
+function openQuoteForm(id) {
+  const editing = id ? Store.getQuote(id) : null;
+  const data = editing || { items: [{ description: "", unit: "gói", quantity: 1, unitPrice: 0 }], taxPct: 10 };
+
+  openModal({
+    title: editing ? "Sửa báo giá" : "Tạo báo giá",
+    wide: true,
+    bodyHtml: `
+      <form id="quote-form" class="form-grid">
+        <label>Khách hàng
+          <select name="clientId" required>${clientOptions(data.clientId)}</select>
+        </label>
+        <label>Trạng thái
+          <select name="status">${Object.entries(STATUS_QUOTE).filter(([k]) => k !== "converted").map(([k, m]) => `<option value="${k}" ${data.status ? (data.status === k ? "selected" : "") : (k === "draft" ? "selected" : "")}>${m.label}</option>`).join("")}</select>
+        </label>
+        <label>Ngày báo giá
+          <input type="date" name="date" value="${data.date || todayISO()}" />
+        </label>
+        <label>Hiệu lực đến
+          <input type="date" name="validUntil" value="${data.validUntil || ""}" />
+        </label>
+        <label>Phạm vi (tùy chọn)
+          <input name="scope" value="${escapeHtml(data.scope || "")}" placeholder="VD: Tư vấn trọn gói" />
+        </label>
+        <label>Thời gian thực hiện dự kiến (tùy chọn)
+          <input name="duration" value="${escapeHtml(data.duration || "")}" placeholder="VD: 1 tháng" />
+        </label>
+        <div class="col-span-2">
+          <div class="row" style="align-items:center;"><h4 style="margin:8px 0">Hạng mục dịch vụ</h4><button type="button" class="btn btn-sm" id="btn-add-item">+ Thêm dòng</button></div>
+          <div class="table-wrap"><table class="data-table">
+            <thead><tr><th>Mô tả</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th><th></th></tr></thead>
+            <tbody id="items-tbody"></tbody>
+          </table></div>
+        </div>
+        <label>Chiết khấu (%)
+          <input type="number" name="discountPct" min="0" max="100" value="${data.discountPct || 0}" />
+        </label>
+        <label>Thuế VAT (%)
+          <input type="number" name="taxPct" min="0" max="100" value="${data.taxPct ?? 10}" />
+        </label>
+        <div class="col-span-2" id="quote-total-line"></div>
+        <label class="col-span-2">Điều khoản thanh toán (tùy chọn)
+          <textarea name="paymentTerms" rows="2" placeholder="VD: Thanh toán 50% khi ký hợp đồng, 50% còn lại khi nghiệm thu.">${escapeHtml(data.paymentTerms || "")}</textarea>
+        </label>
+        <label class="col-span-2">Ghi chú
+          <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
+        </label>
+      </form>
+      ${Store.getClients().length === 0 ? '<p class="hint">Bạn chưa có khách hàng nào. Hãy vào mục Khách hàng để thêm trước.</p>' : ""}
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="quote-save">${editing ? "Lưu thay đổi" : "Tạo báo giá"}</button>`,
+    onMount: () => {
+      let items = (data.items || []).map((i) => ({ ...i }));
+      const tbody = document.getElementById("items-tbody");
+      const form = document.getElementById("quote-form");
+
+      function renderItems() {
+        tbody.innerHTML = items.map((it, idx) => `
+          <tr>
+            <td><input data-idx="${idx}" data-field="description" value="${escapeHtml(it.description || "")}" placeholder="Mô tả dịch vụ" /></td>
+            <td><input data-idx="${idx}" data-field="unit" value="${escapeHtml(it.unit || "")}" style="width:70px" /></td>
+            <td><input type="number" min="0" data-idx="${idx}" data-field="quantity" value="${it.quantity ?? 1}" style="width:64px" /></td>
+            <td><input type="number" min="0" step="1000" data-idx="${idx}" data-field="unitPrice" value="${it.unitPrice ?? 0}" style="width:120px" /></td>
+            <td class="line-total">${formatCurrency(Number(it.quantity || 0) * Number(it.unitPrice || 0))}</td>
+            <td><button type="button" class="icon-btn danger" data-remove="${idx}">🗑</button></td>
+          </tr>`).join("");
+        tbody.querySelectorAll("input").forEach((inp) => inp.addEventListener("input", (e) => {
+          const idx = Number(e.target.dataset.idx);
+          const field = e.target.dataset.field;
+          items[idx][field] = (field === "quantity" || field === "unitPrice") ? Number(e.target.value) : e.target.value;
+          const row = e.target.closest("tr");
+          row.querySelector(".line-total").textContent = formatCurrency(Number(items[idx].quantity || 0) * Number(items[idx].unitPrice || 0));
+          updateTotals();
+        }));
+        tbody.querySelectorAll("[data-remove]").forEach((b) => b.addEventListener("click", () => {
+          items.splice(Number(b.dataset.remove), 1);
+          if (items.length === 0) items.push({ description: "", unit: "gói", quantity: 1, unitPrice: 0 });
+          renderItems();
+          updateTotals();
+        }));
+      }
+
+      function updateTotals() {
+        const discountPct = Number(form.discountPct.value || 0);
+        const taxPct = Number(form.taxPct.value || 0);
+        const sub = items.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0);
+        const discount = (sub * discountPct) / 100;
+        const afterDiscount = sub - discount;
+        const tax = (afterDiscount * taxPct) / 100;
+        const total = afterDiscount + tax;
+        document.getElementById("quote-total-line").innerHTML = `
+          <div class="totals-box">
+            <div><span>Tạm tính</span><span>${formatCurrency(sub)}</span></div>
+            <div><span>Chiết khấu</span><span>-${formatCurrency(discount)}</span></div>
+            <div><span>VAT</span><span>${formatCurrency(tax)}</span></div>
+            <div class="grand"><span>Tổng cộng</span><span>${formatCurrency(total)}</span></div>
+          </div>`;
+      }
+
+      renderItems();
+      updateTotals();
+      document.getElementById("btn-add-item").addEventListener("click", () => {
+        items.push({ description: "", unit: "gói", quantity: 1, unitPrice: 0 });
+        renderItems();
+        updateTotals();
+      });
+      form.discountPct.addEventListener("input", updateTotals);
+      form.taxPct.addEventListener("input", updateTotals);
+
+      document.getElementById("quote-save").addEventListener("click", () => {
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        payload.discountPct = Number(payload.discountPct || 0);
+        payload.taxPct = Number(payload.taxPct || 0);
+        payload.items = items.filter((i) => i.description);
+        if (editing) Store.updateQuote(editing.id, payload);
+        else { payload.code = Store.nextCode("BG"); Store.addQuote(payload); }
+        closeModal();
+        renderCurrentView();
+      });
+    },
+  });
+}
+
+function convertQuoteToContract(id) {
+  const q = Store.getQuote(id);
+  if (!q) return;
+  const { total } = quoteTotal(q);
+  closeModal();
+  openContractForm(null, {
+    clientId: q.clientId,
+    title: `Hợp đồng theo báo giá ${q.code}`,
+    description: (q.items || []).map((i) => `- ${i.description} (SL ${i.quantity} x ${formatCurrency(i.unitPrice)})`).join("\n"),
+    value: Math.round(total),
+  }, () => {
+    Store.updateQuote(id, { status: "converted" });
+    if (state.view === "quotes") renderQuotesTable();
+  });
+}
+
+function printDocWindow(title, innerHtml) {
+  const win = window.open("", "_blank", "width=900,height=1000");
+  if (!win) { alert("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup."); return null; }
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
+    <style>
+      body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:32px;max-width:800px;margin:auto;line-height:1.5;}
+      h1{font-size:20px;margin:0;}
+      h2{font-size:14.5px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.02em;border-bottom:1px solid #cbd5e1;padding-bottom:4px;}
+      .muted{color:#64748b;}
+      table{width:100%;border-collapse:collapse;margin-top:10px;}
+      th,td{border:1px solid #cbd5e1;padding:8px;font-size:12.5px;text-align:left;vertical-align:top;}
+      th{background:#f1f5f9;}
+      .right{text-align:right;}
+      .center{text-align:center;}
+      .totals{width:300px;margin-left:auto;margin-top:12px;}
+      .totals div{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;}
+      .grand{font-weight:bold;border-top:1px solid #334155;margin-top:4px;padding-top:8px !important;font-size:14.5px;}
+      .header{display:flex;justify-content:space-between;border-bottom:2px solid #1e293b;padding-bottom:12px;margin-bottom:16px;}
+      .info-line{margin:2px 0;font-size:12.5px;}
+      .sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px;text-align:center;}
+      .sign-grid .sign-title{font-weight:bold;}
+      .sign-grid .sign-space{height:70px;}
+      ul{margin:6px 0;padding-left:20px;}
+      li{margin:3px 0;font-size:12.5px;}
+      p{font-size:12.5px;}
+      .center-title{text-align:center;}
+      .disclaimer{margin-top:32px;font-size:11px;color:#94a3b8;font-style:italic;}
+    </style></head><body>${innerHtml}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
+  return win;
+}
+
+function printQuote(id, lang = "vi") {
+  const q = Store.getQuote(id);
+  if (!q) return;
+  const client = Store.getClient(q.clientId);
+  const settings = Store.getSettings();
+  const { sub, discount, tax, total } = quoteTotal(q);
+  const T = (key) => t(lang, key);
+  const tf = (key, ...args) => t(lang, key)(...args);
+  const clientName = client ? (client.company || client.name) : "";
+
+  const infoRows = [];
+  infoRows.push(`<div class="info-line"><strong>${T("companyNameLabel")}:</strong> ${escapeHtml(clientName)}</div>`);
+  if (client?.address) infoRows.push(`<div class="info-line"><strong>${T("addressLabel")}:</strong> ${escapeHtml(client.address)}</div>`);
+  if (client?.employeeCount) infoRows.push(`<div class="info-line"><strong>${T("employeeCountLabel")}:</strong> ${escapeHtml(String(client.employeeCount))}</div>`);
+  if (q.scope) infoRows.push(`<div class="info-line"><strong>${T("scopeLabel")}:</strong> ${escapeHtml(q.scope)}</div>`);
+  if (q.duration) infoRows.push(`<div class="info-line"><strong>${T("durationLabel")}:</strong> ${escapeHtml(q.duration)}</div>`);
+
+  const itemsRows = (q.items || []).map((it, idx) => `<tr><td>${idx + 1}</td><td>${escapeHtml(it.description)}</td><td>${escapeHtml(it.unit || "")}</td><td class="center">${it.quantity}</td><td class="right">${formatCurrency(it.unitPrice)}</td><td class="right">${formatCurrency(it.quantity * it.unitPrice)}</td></tr>`).join("");
+  const vatNote = (q.taxPct && q.taxPct > 0) ? tf("vatIncludedNote", q.taxPct) : T("vatExcludedNote");
+
+  const html = `
+    <div class="header">
+      <div>
+        <h1>${escapeHtml(settings.companyName || T("companyFallback"))}</h1>
+        <div class="muted">${escapeHtml(settings.companyAddress || "")}</div>
+        <div class="muted">${settings.companyPhone ? `${T("phoneLabel")}: ${escapeHtml(settings.companyPhone)}` : ""}${settings.companyEmail ? " · " + escapeHtml(settings.companyEmail) : ""}</div>
+        ${settings.companyTaxCode ? `<div class="muted">${T("taxCodeLabel")}: ${escapeHtml(settings.companyTaxCode)}</div>` : ""}
+      </div>
+      <div class="right">
+        <h1>${T("quoteTitle")}</h1>
+        <div class="muted">${T("numberLabel")}: ${escapeHtml(q.code)}</div>
+        <div class="muted">${T("dateLabel")}: ${formatDate(q.date)}</div>
+      </div>
+    </div>
+    <p>${escapeHtml(tf("quoteGreeting", clientName))}</p>
+    <p>${escapeHtml(T("quoteIntro"))}</p>
+
+    <h2>${T("quoteClientInfoTitle")}</h2>
+    ${infoRows.join("")}
+
+    <h2>${T("quotePriceTitle")}</h2>
+    <table>
+      <thead><tr><th>${T("colIndex")}</th><th>${T("colDesc")}</th><th>${T("colUnit")}</th><th>${T("colQty")}</th><th class="right">${T("colUnitPrice")}</th><th class="right">${T("colLineTotal")}</th></tr></thead>
+      <tbody>${itemsRows}</tbody>
+    </table>
+    <div class="totals">
+      <div><span>${T("subtotalLabel")}</span><span>${formatCurrency(sub)}</span></div>
+      ${q.discountPct ? `<div><span>${T("discountLabel")} (${q.discountPct}%)</span><span>-${formatCurrency(discount)}</span></div>` : ""}
+      <div><span>${T("vatLabel")} (${q.taxPct || 0}%)</span><span>${formatCurrency(tax)}</span></div>
+      <div class="grand"><span>${T("totalLabel")}</span><span>${formatCurrency(total)}</span></div>
+    </div>
+    <p class="muted">${escapeHtml(vatNote)}</p>
+    ${q.validUntil ? `<p class="muted">${escapeHtml(tf("validUntilNote", formatDate(q.validUntil)))}</p>` : ""}
+
+    <h2>${T("paymentTitle")}</h2>
+    <p>${escapeHtml(q.paymentTerms || T("paymentDefault"))}</p>
+
+    ${q.note ? `<h2>${T("noteTitle")}</h2><p>${escapeHtml(q.note)}</p>` : ""}
+
+    <h2>${T("confirmTitle")}</h2>
+    <div class="sign-grid">
+      <div>
+        <div class="sign-title">${T("confirmedByLabel")}</div>
+        <div class="muted">${escapeHtml(clientName)}</div>
+        <div class="sign-space"></div>
+        <div class="muted">${T("signPlaceholder")}</div>
+      </div>
+      <div>
+        <div class="sign-title">${T("preparedByLabel")}</div>
+        <div class="muted">${formatDate(q.date)}</div>
+        <div class="sign-space"></div>
+        <div>${escapeHtml(settings.repName || "")}</div>
+      </div>
+    </div>
+
+    <p class="muted center" style="margin-top:32px">${escapeHtml(T("quoteThanks"))}</p>
+    ${lang !== "vi" ? `<p class="disclaimer">${escapeHtml(T("translationDisclaimer"))}</p>` : ""}
+  `;
+  printDocWindow(`${T("quoteTitle")} ${q.code}`, html);
+}
+
+function printContract(id, lang = "vi") {
+  const c = Store.getContract(id);
+  if (!c) return;
+  const client = Store.getClient(c.clientId);
+  const settings = Store.getSettings();
+  const T = (key) => t(lang, key);
+  const tf = (key, ...args) => t(lang, key)(...args);
+  const list = (key) => t(lang, key) || [];
+
+  const partyA = {
+    name: client ? (client.company || client.name) : "",
+    repName: client?.repName || "",
+    repTitle: client?.repTitle || "",
+    address: client?.address || "",
+    phone: client?.phone || "",
+    taxCode: client?.taxCode || "",
+  };
+  const partyB = {
+    name: settings.companyName || "",
+    repName: settings.repName || "",
+    repTitle: settings.repTitle || "",
+    address: settings.companyAddress || "",
+    phone: settings.companyPhone || "",
+    taxCode: settings.companyTaxCode || "",
+  };
+  const partyInfoHtml = (party) => `
+    <div class="info-line"><strong>${escapeHtml(party.name)}</strong></div>
+    <div class="info-line">${T("representativeLabel")}: ${escapeHtml(party.repName)}${party.repTitle ? ` — ${T("positionLabel")}: ${escapeHtml(party.repTitle)}` : ""}</div>
+    <div class="info-line">${T("addressLabel")}: ${escapeHtml(party.address)}</div>
+    <div class="info-line">${T("phoneLabel")}: ${escapeHtml(party.phone)}</div>
+    <div class="info-line">${T("taxCodeLabel")}: ${escapeHtml(party.taxCode)}</div>
+  `;
+
+  const amountWords = lang === "en" ? numberToWordsEn(c.value) : (lang === "vi" ? numberToWordsVi(c.value) : null);
+
+  const payments = (c.payments || []).slice().sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""));
+  const scheduleHtml = payments.length > 0
+    ? `<ul>${payments.map((p, idx) => `<li>${escapeHtml(tf("installmentLine", idx + 1, formatCurrency(p.amount), p.dueDate ? formatDate(p.dueDate) : ""))}</li>`).join("")}</ul>`
+    : `<p>${escapeHtml(T("noScheduleNote"))}</p>`;
+
+  const html = `
+    <div class="center-title">
+      <div><strong>${T("nationTitle")}</strong></div>
+      <div>${T("motto")}</div>
+      <div>-----------------</div>
+    </div>
+    <h1 class="center-title" style="margin-top:20px">${T("contractDocTitle")}</h1>
+    <p class="center-title muted">${T("numberLabel")}: ${escapeHtml(c.code)}</p>
+
+    <p>${T("legalIntro")}</p>
+    <ul>${list("legalBasis").map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
+    <p>${T("todayLinePrefix")} ${formatDate(c.signDate || c.createdAt)}, ${T("todayLineSuffix")}</p>
+
+    <table>
+      <tr>
+        <td style="width:50%"><strong>${T("partyALabel")}</strong>${partyInfoHtml(partyA)}</td>
+        <td style="width:50%"><strong>${T("partyBLabel")}</strong>${partyInfoHtml(partyB)}</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:16px">${T("agreementLine")}</p>
+
+    <h2>${T("article1Title")}</h2>
+    <p>${escapeHtml(tf("article1Body"))}</p>
+    ${c.description ? `<p>${escapeHtml(c.description).replace(/\n/g, "<br/>")}</p>` : ""}
+    ${c.location ? `<p><strong>${T("locationLabel")}:</strong> ${escapeHtml(c.location)}</p>` : ""}
+
+    <h2>${T("article2Title")}</h2>
+    <table>
+      <thead><tr><th>STT</th><th>${T("colContent")}</th><th class="right">${T("colCost")}</th></tr></thead>
+      <tbody><tr><td>1</td><td>${escapeHtml(c.title || "")}</td><td class="right">${formatCurrency(c.value)}</td></tr></tbody>
+    </table>
+    <p><strong>${T("totalCostLabel")}:</strong> ${formatCurrency(c.value)}</p>
+    ${amountWords ? `<p><strong>${T("inWordsLabel")}:</strong> ${escapeHtml(amountWords)}</p>` : ""}
+
+    <h2>${T("article3Title")}</h2>
+    <p>${T("paymentMethodLine")}</p>
+    <p>${T("accountNameLabel")}: ${escapeHtml(settings.bankAccountName || "")}</p>
+    <p>${T("accountNumberLabel")}: ${escapeHtml(settings.bankAccountNumber || "")}</p>
+    <p>${T("bankLabel")}: ${escapeHtml(settings.bankName || "")}</p>
+    <p>${T("currencyLabel")}: ${T("currencyValue")}</p>
+    <p><strong>${T("scheduleLabel")}:</strong></p>
+    ${scheduleHtml}
+    <p>${T("invoiceLine")}</p>
+
+    <h2>${T("article4Title")}</h2>
+    <p><strong>${T("respATitle")}</strong></p>
+    <ul>${list("respA").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+    <p><strong>${T("respBTitle")}</strong></p>
+    <ul>${list("respB").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+
+    <h2>${T("article5Title")}</h2>
+    <ul>${list("article5Body").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+
+    <h2>${T("article6Title")}</h2>
+    <p>${T("article6a")}</p>
+    <p>${T("article6b")}</p>
+    <p>${T("article6c")}</p>
+
+    <h2>${T("article7Title")}</h2>
+    <p>${T("article7Body")}</p>
+
+    <h2>${T("article8Title")}</h2>
+    <ul>${list("article8Body").map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+
+    <div class="sign-grid">
+      <div><div class="sign-title">${T("sigA")}</div><div class="muted">${T("sigNote")}</div><div class="sign-space"></div></div>
+      <div><div class="sign-title">${T("sigB")}</div><div class="muted">${T("sigNote")}</div><div class="sign-space"></div></div>
+    </div>
+
+    ${lang !== "vi" ? `<p class="disclaimer">${escapeHtml(T("translationDisclaimer"))}</p>` : ""}
+  `;
+  printDocWindow(`${T("contractDocTitle")} ${c.code}`, html);
+}
+
+/* ================= REPORTS ================= */
+function renderReports() {
+  const el = document.getElementById("view-reports");
+  const contracts = Store.getContracts();
+  const years = Array.from(new Set(contracts.map((c) => new Date(c.startDate || c.createdAt).getFullYear()).filter((y) => !isNaN(y))));
+  if (!years.includes(state.reportYear)) years.push(state.reportYear);
+  years.sort((a, b) => b - a);
+
+  const totalValue = contracts.filter((c) => c.status !== "cancelled").reduce((s, c) => s + Number(c.value || 0), 0);
+  const totalPaid = contracts.reduce((s, c) => s + (c.payments || []).filter((p) => p.paidDate).reduce((s2, p) => s2 + Number(p.amount || 0), 0), 0);
+  const avgValue = contracts.length ? totalValue / contracts.length : 0;
+
+  const clients = Store.getClients();
+  const topClients = clients.map((cl) => {
+    const cs = contracts.filter((c) => c.clientId === cl.id);
+    return { client: cl, count: cs.length, total: cs.reduce((s, c) => s + Number(c.value || 0), 0) };
+  }).filter((x) => x.count > 0).sort((a, b) => b.total - a.total).slice(0, 8);
+
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Báo cáo</h2><p class="muted">Thống kê doanh thu và hợp đồng</p></div>
+      <select id="report-year">${years.map((y) => `<option value="${y}" ${y === state.reportYear ? "selected" : ""}>${y}</option>`).join("")}</select>
+    </div>
+    <div class="stat-grid">
+      ${statCard("Tổng giá trị hợp đồng", formatCurrency(totalValue), "blue")}
+      ${statCard("Tổng đã thu", formatCurrency(totalPaid), "green")}
+      ${statCard("Giá trị TB / hợp đồng", formatCurrency(avgValue), "indigo")}
+      ${statCard("Tổng số hợp đồng", contracts.length, "teal")}
+    </div>
+    <div class="card">
+      <h3>Doanh thu theo tháng (${state.reportYear})</h3>
+      <canvas id="chart-report-revenue" height="240"></canvas>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Phân bổ trạng thái hợp đồng</h3>
+        <canvas id="chart-report-status" height="220"></canvas>
+      </div>
+      <div class="card">
+        <h3>Khách hàng theo giá trị</h3>
+        <table class="data-table">
+          <thead><tr><th>Khách hàng</th><th>Số HĐ</th><th>Tổng giá trị</th></tr></thead>
+          <tbody>${topClients.length ? topClients.map((x) => `<tr><td>${escapeHtml(x.client.name)}</td><td>${x.count}</td><td>${formatCurrency(x.total)}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">Chưa có dữ liệu</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  document.getElementById("report-year").addEventListener("change", (e) => { state.reportYear = Number(e.target.value); renderReports(); });
+  drawBarChart(document.getElementById("chart-report-revenue"), monthLabels(), monthlyRevenue(contracts, state.reportYear), { formatValue: (v) => (v / 1e6).toFixed(0) + "tr" });
+  drawDonutChart(document.getElementById("chart-report-status"), Object.entries(STATUS_CONTRACT).map(([key, meta]) => ({ label: meta.label, value: contracts.filter((c) => c.status === key).length, color: meta.color })));
+}
+
+/* ================= SETTINGS ================= */
+function renderSettings() {
+  const el = document.getElementById("view-settings");
+  const s = Store.getSettings();
+  el.innerHTML = `
+    <div class="page-header"><h2>Cài đặt</h2><p class="muted">Thông tin công ty và tùy chọn hệ thống</p></div>
+    <div class="card">
+      <h3>Thông tin công ty (hiển thị trên báo giá)</h3>
+      <form id="settings-form" class="form-grid">
+        <label>Tên công ty <input name="companyName" value="${escapeHtml(s.companyName)}" /></label>
+        <label>Mã số thuế <input name="companyTaxCode" value="${escapeHtml(s.companyTaxCode)}" /></label>
+        <label class="col-span-2">Địa chỉ <input name="companyAddress" value="${escapeHtml(s.companyAddress)}" /></label>
+        <label>Điện thoại <input name="companyPhone" value="${escapeHtml(s.companyPhone)}" /></label>
+        <label>Email <input type="email" name="companyEmail" value="${escapeHtml(s.companyEmail)}" /></label>
+        <label>Người đại diện <input name="repName" value="${escapeHtml(s.repName || "")}" /></label>
+        <label>Chức danh người đại diện <input name="repTitle" value="${escapeHtml(s.repTitle || "")}" /></label>
+        <label>Số ngày cảnh báo sắp hết hạn <input type="number" min="1" name="reminderDays" value="${s.reminderDays}" /></label>
+      </form>
+      <button class="btn btn-primary" id="settings-save" style="margin-top:12px">Lưu cài đặt</button>
+    </div>
+    <div class="card">
+      <h3>Thông tin ngân hàng (hiển thị trên hợp đồng)</h3>
+      <form id="bank-form" class="form-grid">
+        <label class="col-span-2">Chủ tài khoản <input name="bankAccountName" value="${escapeHtml(s.bankAccountName || "")}" /></label>
+        <label>Số tài khoản <input name="bankAccountNumber" value="${escapeHtml(s.bankAccountNumber || "")}" /></label>
+        <label>Ngân hàng <input name="bankName" value="${escapeHtml(s.bankName || "")}" /></label>
+      </form>
+      <button class="btn btn-primary" id="bank-save" style="margin-top:12px">Lưu thông tin ngân hàng</button>
+    </div>
+    <div class="card">
+      <h3>Dữ liệu</h3>
+      <p class="muted">Dữ liệu được lưu ngay trên trình duyệt này (localStorage). Hãy sao lưu định kỳ để tránh mất dữ liệu.</p>
+      <div class="row" style="gap:8px">
+        <button class="btn" id="btn-export">⬇ Xuất dữ liệu (JSON)</button>
+        <label class="btn" style="cursor:pointer">⬆ Nhập dữ liệu
+          <input type="file" id="btn-import" accept="application/json" style="display:none" />
+        </label>
+        <button class="btn danger" id="btn-clear">🗑 Xóa toàn bộ dữ liệu</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("settings-save").addEventListener("click", () => {
+    const form = document.getElementById("settings-form");
+    const payload = Object.fromEntries(new FormData(form).entries());
+    payload.reminderDays = Number(payload.reminderDays) || 30;
+    Store.saveSettings(payload);
+    alert("Đã lưu cài đặt.");
+  });
+
+  document.getElementById("bank-save").addEventListener("click", () => {
+    const form = document.getElementById("bank-form");
+    const payload = Object.fromEntries(new FormData(form).entries());
+    Store.saveSettings(payload);
+    alert("Đã lưu thông tin ngân hàng.");
+  });
+
+  document.getElementById("btn-export").addEventListener("click", () => {
+    const data = Store.exportAll();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `hop-dong-tu-van-backup-${todayISO()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById("btn-import").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (confirm("Nhập dữ liệu sẽ ghi đè dữ liệu hiện tại. Tiếp tục?")) {
+          Store.importAll(data);
+          alert("Nhập dữ liệu thành công.");
+          renderCurrentView();
+        }
+      } catch (err) {
+        alert("File không hợp lệ.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  document.getElementById("btn-clear").addEventListener("click", () => {
+    if (confirm("Xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.")) {
+      Store.clearAll();
+      renderCurrentView();
+    }
+  });
+}
+
+/* ---------------- Init ---------------- */
+renderCurrentView();
+  </script>
+</body>
+</html>
