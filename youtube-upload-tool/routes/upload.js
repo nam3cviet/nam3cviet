@@ -6,6 +6,7 @@ const express = require('express');
 const multer = require('multer');
 const { google } = require('googleapis');
 const { createAuthedClient } = require('../lib/googleClient');
+const { getMobileSessionTokens } = require('../lib/mobileSessions');
 
 const router = express.Router();
 
@@ -20,8 +21,11 @@ const upload = multer({ storage, limits: { fileSize: 128 * 1024 * 1024 * 1024 } 
 
 // uploadId -> array of SSE response objects
 const progressClients = new Map();
+// uploadId -> last progress event, for clients that poll instead of using SSE (e.g. mobile)
+const lastStatus = new Map();
 
 function sendProgress(uploadId, data) {
+  lastStatus.set(uploadId, data);
   const clients = progressClients.get(uploadId);
   if (!clients) return;
   const payload = `data: ${JSON.stringify(data)}\n\n`;
@@ -30,15 +34,22 @@ function sendProgress(uploadId, data) {
 
 function closeProgress(uploadId) {
   const clients = progressClients.get(uploadId);
-  if (!clients) return;
-  clients.forEach((res) => res.end());
-  progressClients.delete(uploadId);
+  if (clients) {
+    clients.forEach((res) => res.end());
+    progressClients.delete(uploadId);
+  }
+  // Keep the final status around briefly for clients that poll instead of
+  // using SSE (e.g. mobile), then let it get garbage collected.
+  setTimeout(() => lastStatus.delete(uploadId), 5 * 60 * 1000).unref();
 }
 
 function requireAuth(req, res, next) {
-  if (!req.session.tokens) {
+  const bearer = (req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
+  const tokens = bearer ? getMobileSessionTokens(bearer[1]) : req.session.tokens;
+  if (!tokens) {
     return res.status(401).json({ error: 'Not authenticated. Sign in with Google first.' });
   }
+  req.oauthTokens = tokens;
   next();
 }
 
@@ -65,6 +76,14 @@ router.get('/upload/:uploadId/progress', (req, res) => {
   });
 });
 
+router.get('/upload/:uploadId/status', (req, res) => {
+  const status = lastStatus.get(req.params.uploadId);
+  if (!status) {
+    return res.json({ phase: 'pending' });
+  }
+  res.json(status);
+});
+
 router.post(
   '/upload/:uploadId',
   requireAuth,
@@ -73,7 +92,7 @@ router.post(
     const { uploadId } = req.params;
     const videoFile = req.files?.video?.[0];
     const thumbnailFile = req.files?.thumbnail?.[0];
-    const { title, description, tags, privacyStatus } = req.body;
+    const { title, description, tags, privacyStatus } = req.body || {};
 
     const cleanup = () => {
       [videoFile, thumbnailFile].forEach((f) => {
@@ -89,7 +108,7 @@ router.post(
     res.status(202).json({ uploadId });
 
     try {
-      const auth = createAuthedClient(req.session.tokens);
+      const auth = createAuthedClient(req.oauthTokens);
       const youtube = google.youtube({ version: 'v3', auth });
       const fileSize = fs.statSync(videoFile.path).size;
 

@@ -4,6 +4,10 @@ A small web app for uploading videos to YouTube using the YouTube Data API v3
 and an OAuth2 sign-in flow. Set a title, description, tags, privacy status,
 and an optional thumbnail, then watch upload progress in real time.
 
+This backend also powers [`youtube-upload-mobile`](../youtube-upload-mobile),
+a React Native app — see that project's README for how it authenticates and
+uploads through this same server.
+
 ## Setup
 
 ### 1. Create OAuth2 credentials
@@ -56,6 +60,12 @@ Open `http://localhost:3000`, sign in with Google, and upload a video.
   transfer (via SSE, driven by `onUploadProgress` on the YouTube API call).
 - Temporary files are written to `tmp-uploads/` and deleted after each
   upload completes or fails.
+- **Mobile auth**: `/auth/google?mobile_redirect=<uri>` starts the same
+  Google OAuth flow but, on success, redirects to the app's deep link with a
+  one-time pairing code instead of setting a cookie. The app exchanges that
+  code at `/api/mobile/session` for a bearer token, then calls
+  `/api/upload/:uploadId` with `Authorization: Bearer <token>` and polls
+  `/api/upload/:uploadId/status` (JSON) instead of using SSE.
 
 ## Notes
 
