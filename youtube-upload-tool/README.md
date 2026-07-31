@@ -8,6 +8,10 @@ This backend also powers [`youtube-upload-mobile`](../youtube-upload-mobile),
 a React Native app — see that project's README for how it authenticates and
 uploads through this same server.
 
+To run this somewhere your phone (and the rest of the internet) can reach
+over HTTPS instead of just `localhost`, see [`../deploy`](../deploy) for a
+scripted deploy to a VPS (Nginx + systemd + Let's Encrypt).
+
 ## Setup
 
 ### 1. Create OAuth2 credentials

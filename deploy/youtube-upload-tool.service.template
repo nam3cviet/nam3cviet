@@ -1,0 +1,19 @@
+[Unit]
+Description=YouTube Upload Tool
+After=network.target
+
+[Service]
+Type=simple
+User=__SERVICE_USER__
+WorkingDirectory=__APP_DIR__/youtube-upload-tool
+EnvironmentFile=__APP_DIR__/youtube-upload-tool/.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+# Only this app's own directories, nothing else on disk
+ProtectSystem=strict
+ReadWritePaths=__APP_DIR__/youtube-upload-tool/tmp-uploads
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
