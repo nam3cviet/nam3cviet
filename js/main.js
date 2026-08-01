@@ -2,6 +2,7 @@ import { Store } from "./store.js";
 import { uid, formatCurrency, formatDate, todayISO, daysUntil, escapeHtml, numberToWordsVi, numberToWordsEn } from "./utils.js";
 import { drawBarChart, drawDonutChart } from "./charts.js";
 import { LANGS, t } from "./i18n.js";
+import { ocrFile, ocrLibsAvailable, parseBusinessLicenseText } from "./ocr.js";
 
 const STATUS_CONTRACT = {
   draft: { label: "Nháp", color: "#64748b" },
@@ -480,7 +481,10 @@ function renderClients() {
   el.innerHTML = `
     <div class="page-header row">
       <div><h2>Khách hàng</h2><p class="muted">Danh sách khách hàng sử dụng dịch vụ tư vấn</p></div>
-      <button class="btn btn-primary" id="btn-add-client">+ Thêm khách hàng</button>
+      <div class="row" style="gap:8px;width:auto;">
+        <button class="btn" id="btn-import-license">📷 Nhập từ Giấy phép KD</button>
+        <button class="btn btn-primary" id="btn-add-client">+ Thêm khách hàng</button>
+      </div>
     </div>
     <div class="toolbar">
       <input type="text" id="client-search" placeholder="Tìm theo tên, công ty, SĐT, email..." value="${escapeHtml(state.clientSearch)}" />
@@ -491,8 +495,114 @@ function renderClients() {
     </table></div>
   `;
   document.getElementById("btn-add-client").addEventListener("click", () => openClientForm());
+  document.getElementById("btn-import-license").addEventListener("click", () => openLicenseImportModal());
   document.getElementById("client-search").addEventListener("input", (e) => { state.clientSearch = e.target.value; renderClientsTable(); });
   renderClientsTable();
+}
+
+function openLicenseImportModal() {
+  openModal({
+    title: "Nhập nhanh khách hàng từ Giấy phép kinh doanh",
+    wide: true,
+    bodyHtml: `
+      <p class="hint" style="margin:0 0 12px">Tải lên ảnh chụp hoặc PDF của Giấy chứng nhận đăng ký doanh nghiệp (có thể chọn nhiều file cùng lúc) — hệ thống sẽ tự đọc và điền sẵn thông tin bằng nhận diện văn bản (OCR). Đây là nhận diện tự động, <strong>độ chính xác không tuyệt đối</strong> — vui lòng kiểm tra và sửa lại trước khi lưu. Cần có kết nối Internet để dùng tính năng này.</p>
+      <input type="file" id="license-files" accept="image/*,.pdf" multiple />
+      <div id="license-results" style="margin-top:16px; display:flex; flex-direction:column; gap:12px;"></div>
+    `,
+    footerHtml: `<button class="btn" data-close>Đóng</button><button class="btn btn-primary" id="license-save-all" style="display:none">Thêm khách hàng đã chọn</button>`,
+    onMount: () => {
+      const rows = [];
+      const resultsEl = document.getElementById("license-results");
+      const saveBtn = document.getElementById("license-save-all");
+
+      function renderRows() {
+        resultsEl.innerHTML = rows.map((r, idx) => `
+          <div class="card" style="margin:0;padding:14px 16px;">
+            <div class="row" style="align-items:center;">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:600;">
+                <input type="checkbox" data-check="${idx}" ${r.checked ? "checked" : ""} ${r.status !== "done" ? "disabled" : ""} style="width:auto" />
+                ${escapeHtml(r.file.name)}
+              </label>
+              <span class="badge ${r.status === "done" ? "badge-green" : r.status === "error" ? "badge-red" : "badge-amber"}">${r.status === "processing" ? "Đang đọc..." : r.status === "done" ? "Đã đọc xong" : r.status === "error" ? "Lỗi" : "Chờ xử lý"}</span>
+            </div>
+            ${r.status === "done" ? `
+              <div class="form-grid" style="margin-top:12px;">
+                <label>Tên công ty <input data-field="company" data-idx="${idx}" value="${escapeHtml(r.parsed.company)}" /></label>
+                <label>Mã số thuế <input data-field="taxCode" data-idx="${idx}" value="${escapeHtml(r.parsed.taxCode)}" /></label>
+                <label class="col-span-2">Địa chỉ <input data-field="address" data-idx="${idx}" value="${escapeHtml(r.parsed.address)}" /></label>
+                <label>Người đại diện <input data-field="repName" data-idx="${idx}" value="${escapeHtml(r.parsed.repName)}" /></label>
+                <label>Chức danh <input data-field="repTitle" data-idx="${idx}" value="${escapeHtml(r.parsed.repTitle)}" /></label>
+              </div>
+            ` : ""}
+            ${r.status === "error" ? `<p class="muted small" style="margin-top:8px">${escapeHtml(r.errorMsg || "Không đọc được file này.")}</p>` : ""}
+          </div>
+        `).join("");
+
+        resultsEl.querySelectorAll("[data-check]").forEach((cb) => cb.addEventListener("change", (e) => {
+          rows[Number(e.target.dataset.check)].checked = e.target.checked;
+          updateSaveBtn();
+        }));
+        resultsEl.querySelectorAll("[data-field]").forEach((inp) => inp.addEventListener("input", (e) => {
+          rows[Number(e.target.dataset.idx)].parsed[e.target.dataset.field] = e.target.value;
+        }));
+      }
+
+      function updateSaveBtn() {
+        saveBtn.style.display = rows.some((r) => r.checked && r.status === "done") ? "" : "none";
+      }
+
+      document.getElementById("license-files").addEventListener("change", async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+        if (!ocrLibsAvailable()) {
+          alert("Không tải được thư viện nhận diện văn bản. Vui lòng kiểm tra kết nối Internet rồi thử lại.");
+          return;
+        }
+        const startIdx = rows.length;
+        files.forEach((file) => rows.push({
+          file, status: "queued", checked: true,
+          parsed: { company: "", taxCode: "", address: "", repName: "", repTitle: "" },
+        }));
+        renderRows();
+
+        for (let i = startIdx; i < rows.length; i++) {
+          const row = rows[i];
+          row.status = "processing";
+          renderRows();
+          try {
+            const text = await ocrFile(row.file);
+            row.parsed = parseBusinessLicenseText(text);
+            row.status = "done";
+          } catch (err) {
+            row.status = "error";
+            row.errorMsg = String(err?.message || err);
+          }
+          renderRows();
+          updateSaveBtn();
+        }
+      });
+
+      saveBtn.addEventListener("click", () => {
+        let count = 0;
+        rows.filter((r) => r.checked && r.status === "done").forEach((r) => {
+          const p = r.parsed;
+          if (!p.company && !p.repName && !p.taxCode) return;
+          Store.addClient({
+            name: p.repName || p.company || "Khách hàng mới",
+            company: p.company,
+            taxCode: p.taxCode,
+            address: p.address,
+            repName: p.repName,
+            repTitle: p.repTitle,
+          });
+          count++;
+        });
+        closeModal();
+        renderCurrentView();
+        alert(`Đã thêm ${count} khách hàng từ giấy phép kinh doanh.`);
+      });
+    },
+  });
 }
 
 function renderClientsTable() {
