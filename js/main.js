@@ -108,8 +108,12 @@ function clientOptions(selectedId) {
   return clients.map((c) => `<option value="${c.id}" ${c.id === selectedId ? "selected" : ""}>${escapeHtml(c.name)}${c.company ? ` (${escapeHtml(c.company)})` : ""}</option>`).join("");
 }
 
-function statCard(label, value, tone) {
-  return `<div class="stat-card tone-${tone}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div></div>`;
+function statCard(label, value, tone, icon = "") {
+  return `<div class="stat-card tone-${tone}">
+    ${icon ? `<div class="stat-icon">${icon}</div>` : ""}
+    <div class="stat-label">${label}</div>
+    <div class="stat-value">${value}</div>
+  </div>`;
 }
 
 function monthLabels() { return Array.from({ length: 12 }, (_, i) => `T${i + 1}`); }
@@ -157,12 +161,12 @@ function renderDashboard() {
   el.innerHTML = `
     <div class="page-header"><h2>Tổng quan</h2><p class="muted">Tình hình hợp đồng tư vấn của bạn.</p></div>
     <div class="stat-grid">
-      ${statCard("Tổng hợp đồng", contracts.length, "blue")}
-      ${statCard("Đang thực hiện", activeContracts.length, "indigo")}
-      ${statCard("Tổng giá trị", formatCurrency(totalValue), "green")}
-      ${statCard("Đã thu", formatCurrency(totalPaid), "teal")}
-      ${statCard("Còn phải thu", formatCurrency(totalOutstanding), "amber")}
-      ${statCard("Sắp / đã hết hạn", expiringSoon.length + overdueContracts.length, "red")}
+      ${statCard("Tổng hợp đồng", contracts.length, "blue", "📄")}
+      ${statCard("Đang thực hiện", activeContracts.length, "indigo", "🔄")}
+      ${statCard("Tổng giá trị", formatCurrency(totalValue), "green", "💰")}
+      ${statCard("Đã thu", formatCurrency(totalPaid), "teal", "✅")}
+      ${statCard("Còn phải thu", formatCurrency(totalOutstanding), "amber", "⏳")}
+      ${statCard("Sắp / đã hết hạn", expiringSoon.length + overdueContracts.length, "red", "⏰")}
     </div>
     <div class="grid-2">
       <div class="card">
@@ -1059,10 +1063,10 @@ function renderReports() {
       <select id="report-year">${years.map((y) => `<option value="${y}" ${y === state.reportYear ? "selected" : ""}>${y}</option>`).join("")}</select>
     </div>
     <div class="stat-grid">
-      ${statCard("Tổng giá trị hợp đồng", formatCurrency(totalValue), "blue")}
-      ${statCard("Tổng đã thu", formatCurrency(totalPaid), "green")}
-      ${statCard("Giá trị TB / hợp đồng", formatCurrency(avgValue), "indigo")}
-      ${statCard("Tổng số hợp đồng", contracts.length, "teal")}
+      ${statCard("Tổng giá trị hợp đồng", formatCurrency(totalValue), "blue", "💰")}
+      ${statCard("Tổng đã thu", formatCurrency(totalPaid), "green", "✅")}
+      ${statCard("Giá trị TB / hợp đồng", formatCurrency(avgValue), "indigo", "📊")}
+      ${statCard("Tổng số hợp đồng", contracts.length, "teal", "📄")}
     </div>
     <div class="card">
       <h3>Doanh thu theo tháng (${state.reportYear})</h3>
