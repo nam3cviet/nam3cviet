@@ -794,8 +794,9 @@ function convertQuoteToContract(id) {
 function printDocWindow(title, innerHtml) {
   const win = window.open("", "_blank", "width=900,height=1000");
   if (!win) { alert("Trình duyệt đã chặn cửa sổ in. Vui lòng cho phép popup."); return null; }
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${escapeHtml(title)}</title>
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${escapeHtml(title)}</title>
     <style>
+      *{box-sizing:border-box;}
       body{font-family:Arial,Helvetica,sans-serif;color:#1e293b;padding:32px;max-width:800px;margin:auto;line-height:1.5;}
       h1{font-size:20px;margin:0;}
       h2{font-size:14.5px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.02em;border-bottom:1px solid #cbd5e1;padding-bottom:4px;}
@@ -808,7 +809,7 @@ function printDocWindow(title, innerHtml) {
       .totals{width:300px;margin-left:auto;margin-top:12px;}
       .totals div{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;}
       .grand{font-weight:bold;border-top:1px solid #334155;margin-top:4px;padding-top:8px !important;font-size:14.5px;}
-      .header{display:flex;justify-content:space-between;border-bottom:2px solid #1e293b;padding-bottom:12px;margin-bottom:16px;}
+      .header{display:flex;justify-content:space-between;border-bottom:2px solid #1e293b;padding-bottom:12px;margin-bottom:16px;gap:16px;}
       .info-line{margin:2px 0;font-size:12.5px;}
       .sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px;text-align:center;}
       .sign-grid .sign-title{font-weight:bold;}
@@ -818,6 +819,21 @@ function printDocWindow(title, innerHtml) {
       p{font-size:12.5px;}
       .center-title{text-align:center;}
       .disclaimer{margin-top:32px;font-size:11px;color:#94a3b8;font-style:italic;}
+      .party-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:10px;}
+      .party-grid>div{border:1px solid #cbd5e1;border-radius:6px;padding:10px 12px;}
+      @media (max-width: 640px) {
+        body{padding:18px;}
+        .header{flex-direction:column;}
+        .header .right{text-align:left;}
+        th,td{padding:5px;font-size:11.5px;}
+        .totals{width:100%;}
+        .party-grid{grid-template-columns:1fr;gap:14px;}
+        .sign-grid{grid-template-columns:1fr;gap:28px;}
+      }
+      @media print {
+        body{padding:0;max-width:none;}
+        @page { margin: 16mm; }
+      }
     </style></head><body>${innerHtml}</body></html>`);
   win.document.close();
   win.focus();
@@ -959,12 +975,10 @@ function printContract(id, lang = "vi") {
     <ul>${list("legalBasis").map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
     <p>${T("todayLinePrefix")} ${formatDate(c.signDate || c.createdAt)}, ${T("todayLineSuffix")}</p>
 
-    <table>
-      <tr>
-        <td style="width:50%"><strong>${T("partyALabel")}</strong>${partyInfoHtml(partyA)}</td>
-        <td style="width:50%"><strong>${T("partyBLabel")}</strong>${partyInfoHtml(partyB)}</td>
-      </tr>
-    </table>
+    <div class="party-grid">
+      <div><strong>${T("partyALabel")}</strong>${partyInfoHtml(partyA)}</div>
+      <div><strong>${T("partyBLabel")}</strong>${partyInfoHtml(partyB)}</div>
+    </div>
 
     <p style="margin-top:16px">${T("agreementLine")}</p>
 
