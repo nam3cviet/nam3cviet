@@ -1,4 +1,5 @@
 import { uid } from "./utils.js";
+import { syncCreate, syncUpdate, syncDelete, syncSettings } from "./auth.js";
 
 const KEYS = {
   clients: "cms_clients",
@@ -45,6 +46,7 @@ export const Store = {
     const item = { id: uid(), createdAt: new Date().toISOString(), ...data };
     list.push(item);
     this.saveClients(list);
+    syncCreate("clients", item);
     return item;
   },
   updateClient(id, patch) {
@@ -53,10 +55,12 @@ export const Store = {
     if (idx === -1) return null;
     list[idx] = { ...list[idx], ...patch };
     this.saveClients(list);
+    syncUpdate("clients", id, list[idx]);
     return list[idx];
   },
   deleteClient(id) {
     this.saveClients(this.getClients().filter((c) => c.id !== id));
+    syncDelete("clients", id);
   },
   getClient(id) { return this.getClients().find((c) => c.id === id) || null; },
 
@@ -68,6 +72,7 @@ export const Store = {
     const item = { id: uid(), payments: [], createdAt: new Date().toISOString(), ...data };
     list.push(item);
     this.saveContracts(list);
+    syncCreate("contracts", item);
     return item;
   },
   updateContract(id, patch) {
@@ -76,10 +81,12 @@ export const Store = {
     if (idx === -1) return null;
     list[idx] = { ...list[idx], ...patch };
     this.saveContracts(list);
+    syncUpdate("contracts", id, list[idx]);
     return list[idx];
   },
   deleteContract(id) {
     this.saveContracts(this.getContracts().filter((c) => c.id !== id));
+    syncDelete("contracts", id);
   },
   getContract(id) { return this.getContracts().find((c) => c.id === id) || null; },
 
@@ -91,6 +98,7 @@ export const Store = {
     const item = { id: uid(), createdAt: new Date().toISOString(), ...data };
     list.push(item);
     this.saveQuotes(list);
+    syncCreate("quotes", item);
     return item;
   },
   updateQuote(id, patch) {
@@ -99,16 +107,23 @@ export const Store = {
     if (idx === -1) return null;
     list[idx] = { ...list[idx], ...patch };
     this.saveQuotes(list);
+    syncUpdate("quotes", id, list[idx]);
     return list[idx];
   },
   deleteQuote(id) {
     this.saveQuotes(this.getQuotes().filter((q) => q.id !== id));
+    syncDelete("quotes", id);
   },
   getQuote(id) { return this.getQuotes().find((q) => q.id === id) || null; },
 
   // Settings
   getSettings() { return { ...defaultSettings, ...load(KEYS.settings, {}) }; },
-  saveSettings(data) { save(KEYS.settings, { ...this.getSettings(), ...data }); },
+  saveSettings(data) {
+    const merged = { ...this.getSettings(), ...data };
+    save(KEYS.settings, merged);
+    syncSettings(merged);
+    return merged;
+  },
 
   // Auto document codes, e.g. HD-2026-001
   nextCode(prefix) {
@@ -119,6 +134,16 @@ export const Store = {
     seq[key] = next;
     save(KEYS.seq, seq);
     return `${prefix}-${year}-${String(next).padStart(3, "0")}`;
+  },
+
+  // Overwrites local data with what the server sent on login. Uses the plain
+  // list savers (not add/update/delete), so this never re-triggers a sync
+  // call back to the server it just came from.
+  replaceAllFromServer({ clients, contracts, quotes, settings }) {
+    if (clients) this.saveClients(clients);
+    if (contracts) this.saveContracts(contracts);
+    if (quotes) this.saveQuotes(quotes);
+    if (settings) save(KEYS.settings, { ...defaultSettings, ...settings });
   },
 
   // Backup / restore

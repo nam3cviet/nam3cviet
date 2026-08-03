@@ -1,0 +1,3 @@
+# Local SQLite database used only for testing the PHP backend (see api/).
+# Production uses MySQL, configured in api/config.php.
+api/data.sqlite

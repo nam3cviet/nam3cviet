@@ -23,8 +23,9 @@
         <button class="nav-item" data-view="quotes">🧾 Báo giá</button>
         <button class="nav-item" data-view="reports">📈 Báo cáo</button>
         <button class="nav-item" data-view="settings">⚙️ Cài đặt</button>
+        <button class="nav-item" data-view="users" id="nav-users" style="display:none">👤 Người dùng</button>
       </nav>
-      <div class="sidebar-footer">Dữ liệu lưu tại trình duyệt này</div>
+      <div class="sidebar-footer" id="sidebar-footer">Dữ liệu lưu tại trình duyệt này</div>
     </aside>
     <main class="content">
       <section id="view-dashboard" class="view active"></section>
@@ -33,8 +34,10 @@
       <section id="view-quotes" class="view"></section>
       <section id="view-reports" class="view"></section>
       <section id="view-settings" class="view"></section>
+      <section id="view-users" class="view"></section>
     </main>
   </div>
+  <div id="auth-root"></div>
   <div id="modal-root"></div>
   <!-- OCR (đọc ảnh/PDF giấy phép kinh doanh) — tải từ CDN, cần Internet -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>

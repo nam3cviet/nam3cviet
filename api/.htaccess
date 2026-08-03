@@ -1,0 +1,4 @@
+# Block direct access to files that should never be fetched by a browser.
+<FilesMatch "^(config\.php|schema\.sql|data\.sqlite)$">
+  Require all denied
+</FilesMatch>

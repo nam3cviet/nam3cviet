@@ -384,6 +384,74 @@ canvas { width: 100%; display: block; }
   .lang-grid { grid-template-columns: 1fr; }
 }
 
+/* Auth (login gate) */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-2) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+.auth-card {
+  background: var(--surface);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 380px;
+  padding: 32px 28px;
+  box-shadow: var(--shadow-lg);
+}
+.auth-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.auth-title { font-size: 18px; font-weight: 800; margin: 0; }
+.auth-sub { font-size: 12.5px; color: var(--text-muted); margin: 2px 0 0; }
+.auth-form { display: flex; flex-direction: column; gap: 14px; }
+.auth-form label { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text-muted); font-weight: 600; }
+.auth-form input {
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14.5px;
+  font-family: inherit;
+}
+.auth-error { background: #fef2f2; color: var(--red); padding: 9px 12px; border-radius: var(--radius-sm); font-size: 13px; }
+.auth-submit { margin-top: 4px; width: 100%; text-align: center; }
+
+.user-badge { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.user-badge .role-pill { font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,0.1); color: #cbd5e1; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.user-badge button { background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 12px; text-decoration: underline; padding: 0; }
+.user-badge button:hover { color: #fff; }
+
+/* Read-only role: hide write-triggering controls (backend still enforces this too) */
+body.readonly-mode .btn-primary,
+body.readonly-mode #btn-import-license,
+body.readonly-mode #btn-add-payment,
+body.readonly-mode #btn-import-label,
+body.readonly-mode #btn-clear,
+body.readonly-mode [data-edit-id],
+body.readonly-mode [data-del-id],
+body.readonly-mode [data-mark-paid],
+body.readonly-mode [data-del-payment],
+body.readonly-mode [data-convert-id] {
+  display: none !important;
+}
+
+.sync-warning {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  box-shadow: var(--shadow-md);
+  z-index: 150;
+  max-width: 320px;
+}
+
 </style>
 </head>
 <body>
@@ -403,8 +471,9 @@ canvas { width: 100%; display: block; }
         <button class="nav-item" data-view="quotes">🧾 Báo giá</button>
         <button class="nav-item" data-view="reports">📈 Báo cáo</button>
         <button class="nav-item" data-view="settings">⚙️ Cài đặt</button>
+        <button class="nav-item" data-view="users" id="nav-users" style="display:none">👤 Người dùng</button>
       </nav>
-      <div class="sidebar-footer">Dữ liệu lưu tại trình duyệt này</div>
+      <div class="sidebar-footer" id="sidebar-footer">Dữ liệu lưu tại trình duyệt này</div>
     </aside>
     <main class="content">
       <section id="view-dashboard" class="view active"></section>
@@ -413,8 +482,10 @@ canvas { width: 100%; display: block; }
       <section id="view-quotes" class="view"></section>
       <section id="view-reports" class="view"></section>
       <section id="view-settings" class="view"></section>
+      <section id="view-users" class="view"></section>
     </main>
   </div>
+  <div id="auth-root"></div>
   <div id="modal-root"></div>
   <!-- OCR (đọc ảnh/PDF giấy phép kinh doanh) — tải từ CDN, cần Internet -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -1419,6 +1490,108 @@ function parseBusinessLicenseText(text) {
   return { company, taxCode, address, repName, repTitle };
 }
 
+/* ===== auth.js ===== */
+// Client for the optional PHP+MySQL backend under /api. The app works fully
+// offline on localStorage without this backend; when it's deployed and the
+// user logs in, Store (see store.js) mirrors every local write to the server
+// in the background ("write-behind") so data is shared instead of trapped in
+// one browser. See README.md for the deployment story.
+
+const API_BASE = "api";
+
+async function apiFetch(path, options = {}) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* empty body */ }
+  if (!res.ok) {
+    const err = new Error((data && data.error) || `Lỗi máy chủ (HTTP ${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+async function login(username, password) {
+  const data = await apiFetch("/auth_login.php", { method: "POST", body: JSON.stringify({ username, password }) });
+  return data.user;
+}
+
+async function logout() {
+  try { await apiFetch("/auth_logout.php", { method: "POST" }); } catch (e) { /* ignore */ }
+}
+
+// Distinguishes "no /api backend deployed here at all" (e.g. the standalone
+// file or a plain static host) from "backend deployed but nobody logged in
+// yet" — the app only shows a login gate in the latter case, so the same
+// code keeps working with zero setup wherever /api isn't present.
+async function checkSession() {
+  try {
+    const res = await fetch(`${API_BASE}/auth_me.php`, {
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) return { backendAvailable: false, user: null };
+    const data = await res.json().catch(() => null);
+    if (!data) return { backendAvailable: false, user: null };
+    return { backendAvailable: true, user: data.user || null };
+  } catch (e) {
+    return { backendAvailable: false, user: null };
+  }
+}
+
+async function pullAllFromServer() {
+  const [clients, contracts, quotes, settings] = await Promise.all([
+    apiFetch("/clients.php"),
+    apiFetch("/contracts.php"),
+    apiFetch("/quotes.php"),
+    apiFetch("/settings.php"),
+  ]);
+  return {
+    clients: clients.items || [],
+    contracts: contracts.items || [],
+    quotes: quotes.items || [],
+    settings: settings.settings || {},
+  };
+}
+
+async function listUsers() { return (await apiFetch("/users.php")).items; }
+async function createUser(payload) { return (await apiFetch("/users.php", { method: "POST", body: JSON.stringify(payload) })).item; }
+async function updateUserAccount(id, payload) { return apiFetch(`/users.php?id=${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(payload) }); }
+async function deleteUserAccount(id) { return apiFetch(`/users.php?id=${encodeURIComponent(id)}`, { method: "DELETE" }); }
+
+/* ---------------- Write-behind sync used by store.js ---------------- */
+
+let syncEnabled = false;
+let onSyncError = null;
+
+function enableSync(errorHandler) { syncEnabled = true; onSyncError = errorHandler || null; }
+function disableSync() { syncEnabled = false; onSyncError = null; }
+
+function reportError(resource, action) {
+  if (onSyncError) onSyncError(resource, action);
+}
+
+function syncCreate(resource, item) {
+  if (!syncEnabled) return;
+  apiFetch(`/${resource}.php`, { method: "POST", body: JSON.stringify(item) }).catch(() => reportError(resource, "create"));
+}
+function syncUpdate(resource, id, item) {
+  if (!syncEnabled) return;
+  apiFetch(`/${resource}.php?id=${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(item) }).catch(() => reportError(resource, "update"));
+}
+function syncDelete(resource, id) {
+  if (!syncEnabled) return;
+  apiFetch(`/${resource}.php?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => reportError(resource, "delete"));
+}
+function syncSettings(settings) {
+  if (!syncEnabled) return;
+  apiFetch("/settings.php", { method: "PUT", body: JSON.stringify(settings) }).catch(() => reportError("settings", "update"));
+}
+
 /* ===== store.js ===== */
 const KEYS = {
   clients: "cms_clients",
@@ -1465,6 +1638,7 @@ const Store = {
     const item = { id: uid(), createdAt: new Date().toISOString(), ...data };
     list.push(item);
     this.saveClients(list);
+    syncCreate("clients", item);
     return item;
   },
   updateClient(id, patch) {
@@ -1473,10 +1647,12 @@ const Store = {
     if (idx === -1) return null;
     list[idx] = { ...list[idx], ...patch };
     this.saveClients(list);
+    syncUpdate("clients", id, list[idx]);
     return list[idx];
   },
   deleteClient(id) {
     this.saveClients(this.getClients().filter((c) => c.id !== id));
+    syncDelete("clients", id);
   },
   getClient(id) { return this.getClients().find((c) => c.id === id) || null; },
 
@@ -1488,6 +1664,7 @@ const Store = {
     const item = { id: uid(), payments: [], createdAt: new Date().toISOString(), ...data };
     list.push(item);
     this.saveContracts(list);
+    syncCreate("contracts", item);
     return item;
   },
   updateContract(id, patch) {
@@ -1496,10 +1673,12 @@ const Store = {
     if (idx === -1) return null;
     list[idx] = { ...list[idx], ...patch };
     this.saveContracts(list);
+    syncUpdate("contracts", id, list[idx]);
     return list[idx];
   },
   deleteContract(id) {
     this.saveContracts(this.getContracts().filter((c) => c.id !== id));
+    syncDelete("contracts", id);
   },
   getContract(id) { return this.getContracts().find((c) => c.id === id) || null; },
 
@@ -1511,6 +1690,7 @@ const Store = {
     const item = { id: uid(), createdAt: new Date().toISOString(), ...data };
     list.push(item);
     this.saveQuotes(list);
+    syncCreate("quotes", item);
     return item;
   },
   updateQuote(id, patch) {
@@ -1519,16 +1699,23 @@ const Store = {
     if (idx === -1) return null;
     list[idx] = { ...list[idx], ...patch };
     this.saveQuotes(list);
+    syncUpdate("quotes", id, list[idx]);
     return list[idx];
   },
   deleteQuote(id) {
     this.saveQuotes(this.getQuotes().filter((q) => q.id !== id));
+    syncDelete("quotes", id);
   },
   getQuote(id) { return this.getQuotes().find((q) => q.id === id) || null; },
 
   // Settings
   getSettings() { return { ...defaultSettings, ...load(KEYS.settings, {}) }; },
-  saveSettings(data) { save(KEYS.settings, { ...this.getSettings(), ...data }); },
+  saveSettings(data) {
+    const merged = { ...this.getSettings(), ...data };
+    save(KEYS.settings, merged);
+    syncSettings(merged);
+    return merged;
+  },
 
   // Auto document codes, e.g. HD-2026-001
   nextCode(prefix) {
@@ -1539,6 +1726,16 @@ const Store = {
     seq[key] = next;
     save(KEYS.seq, seq);
     return `${prefix}-${year}-${String(next).padStart(3, "0")}`;
+  },
+
+  // Overwrites local data with what the server sent on login. Uses the plain
+  // list savers (not add/update/delete), so this never re-triggers a sync
+  // call back to the server it just came from.
+  replaceAllFromServer({ clients, contracts, quotes, settings }) {
+    if (clients) this.saveClients(clients);
+    if (contracts) this.saveContracts(contracts);
+    if (quotes) this.saveQuotes(quotes);
+    if (settings) save(KEYS.settings, { ...defaultSettings, ...settings });
   },
 
   // Backup / restore
@@ -1597,7 +1794,22 @@ const state = {
   quoteSearch: "",
   quoteStatus: "all",
   reportYear: new Date().getFullYear(),
+  backendAvailable: false,
+  currentUser: null,
 };
+
+/* ---------------- Auth / permissions ---------------- */
+function canWrite() {
+  return !(state.backendAvailable && state.currentUser && state.currentUser.role === "viewer");
+}
+
+function guardWrite() {
+  if (!canWrite()) {
+    alert("Tài khoản chỉ xem không có quyền chỉnh sửa dữ liệu.");
+    return false;
+  }
+  return true;
+}
 
 /* ---------------- Navigation ---------------- */
 function setView(view) {
@@ -1615,6 +1827,7 @@ function renderCurrentView() {
     case "quotes": return renderQuotes();
     case "reports": return renderReports();
     case "settings": return renderSettings();
+    case "users": return renderUsers();
   }
 }
 
@@ -1863,6 +2076,7 @@ function renderContractsTable() {
   tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => pickLanguageThen((lang) => printContract(b.dataset.printId, lang))));
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openContractForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     if (confirm("Xóa hợp đồng này? Hành động không thể hoàn tác.")) { Store.deleteContract(b.dataset.delId); renderContractsTable(); }
   }));
 }
@@ -1911,6 +2125,7 @@ function openContractForm(id, prefill, onSaved) {
     footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="contract-save">${editing ? "Lưu thay đổi" : "Tạo hợp đồng"}</button>`,
     onMount: () => {
       document.getElementById("contract-save").addEventListener("click", () => {
+        if (!guardWrite()) return;
         const form = document.getElementById("contract-form");
         if (!form.reportValidity()) return;
         const payload = Object.fromEntries(new FormData(form).entries());
@@ -1991,6 +2206,7 @@ function renderPaymentsTbody(contractId) {
   }).join("");
 
   tbody.querySelectorAll("[data-mark-paid]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     const c2 = Store.getContract(contractId);
     const payments2 = c2.payments.map((p) => (p.id === b.dataset.markPaid ? { ...p, paidDate: todayISO() } : p));
     Store.updateContract(contractId, { payments: payments2 });
@@ -1998,6 +2214,7 @@ function renderPaymentsTbody(contractId) {
     if (state.view === "contracts") renderContractsTable();
   }));
   tbody.querySelectorAll("[data-del-payment]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     if (!confirm("Xóa đợt thanh toán này?")) return;
     const c2 = Store.getContract(contractId);
     Store.updateContract(contractId, { payments: c2.payments.filter((p) => p.id !== b.dataset.delPayment) });
@@ -2026,6 +2243,7 @@ function openPaymentForm(contractId) {
     footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="payment-save">Lưu</button>`,
     onMount: () => {
       document.getElementById("payment-save").addEventListener("click", () => {
+        if (!guardWrite()) return;
         const form = document.getElementById("payment-form");
         if (!form.reportValidity()) return;
         const fd = new FormData(form);
@@ -2153,6 +2371,7 @@ function openLicenseImportModal() {
       });
 
       saveBtn.addEventListener("click", () => {
+        if (!guardWrite()) return;
         let count = 0;
         rows.filter((r) => r.checked && r.status === "done").forEach((r) => {
           const p = r.parsed;
@@ -2206,6 +2425,7 @@ function renderClientsTable() {
 
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openClientForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     const used = contracts.some((k) => k.clientId === b.dataset.delId) || quotes.some((qt) => qt.clientId === b.dataset.delId);
     if (used) { alert("Không thể xóa: khách hàng đang có hợp đồng hoặc báo giá liên quan."); return; }
     if (confirm("Xóa khách hàng này?")) { Store.deleteClient(b.dataset.delId); renderClientsTable(); }
@@ -2254,6 +2474,7 @@ function openClientForm(id) {
     footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="client-save">${editing ? "Lưu thay đổi" : "Thêm khách hàng"}</button>`,
     onMount: () => {
       document.getElementById("client-save").addEventListener("click", () => {
+        if (!guardWrite()) return;
         const form = document.getElementById("client-form");
         if (!form.reportValidity()) return;
         const payload = Object.fromEntries(new FormData(form).entries());
@@ -2331,6 +2552,7 @@ function renderQuotesTable() {
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openQuoteForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-convert-id]").forEach((b) => b.addEventListener("click", () => convertQuoteToContract(b.dataset.convertId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     if (confirm("Xóa báo giá này?")) { Store.deleteQuote(b.dataset.delId); renderQuotesTable(); }
   }));
 }
@@ -2450,6 +2672,7 @@ function openQuoteForm(id) {
       form.taxPct.addEventListener("input", updateTotals);
 
       document.getElementById("quote-save").addEventListener("click", () => {
+        if (!guardWrite()) return;
         if (!form.reportValidity()) return;
         const payload = Object.fromEntries(new FormData(form).entries());
         payload.discountPct = Number(payload.discountPct || 0);
@@ -2811,7 +3034,7 @@ function renderSettings() {
       <p class="muted">Dữ liệu được lưu ngay trên trình duyệt này (localStorage). Hãy sao lưu định kỳ để tránh mất dữ liệu.</p>
       <div class="row" style="gap:8px">
         <button class="btn" id="btn-export">⬇ Xuất dữ liệu (JSON)</button>
-        <label class="btn" style="cursor:pointer">⬆ Nhập dữ liệu
+        <label class="btn" id="btn-import-label" style="cursor:pointer">⬆ Nhập dữ liệu
           <input type="file" id="btn-import" accept="application/json" style="display:none" />
         </label>
         <button class="btn danger" id="btn-clear">🗑 Xóa toàn bộ dữ liệu</button>
@@ -2820,6 +3043,7 @@ function renderSettings() {
   `;
 
   document.getElementById("settings-save").addEventListener("click", () => {
+    if (!guardWrite()) return;
     const form = document.getElementById("settings-form");
     const payload = Object.fromEntries(new FormData(form).entries());
     payload.reminderDays = Number(payload.reminderDays) || 30;
@@ -2828,6 +3052,7 @@ function renderSettings() {
   });
 
   document.getElementById("bank-save").addEventListener("click", () => {
+    if (!guardWrite()) return;
     const form = document.getElementById("bank-form");
     const payload = Object.fromEntries(new FormData(form).entries());
     Store.saveSettings(payload);
@@ -2845,6 +3070,7 @@ function renderSettings() {
   });
 
   document.getElementById("btn-import").addEventListener("change", (e) => {
+    if (!guardWrite()) { e.target.value = ""; return; }
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -2865,6 +3091,7 @@ function renderSettings() {
   });
 
   document.getElementById("btn-clear").addEventListener("click", () => {
+    if (!guardWrite()) return;
     if (confirm("Xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.")) {
       Store.clearAll();
       renderCurrentView();
@@ -2872,8 +3099,224 @@ function renderSettings() {
   });
 }
 
+/* ================= USERS (admin only) ================= */
+function renderUsers() {
+  const el = document.getElementById("view-users");
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Người dùng</h2><p class="muted">Quản lý tài khoản đăng nhập — Full quyền hoặc Chỉ xem</p></div>
+      <button class="btn btn-primary" id="btn-add-user">+ Thêm người dùng</button>
+    </div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Quyền</th><th>Ngày tạo</th><th></th></tr></thead>
+      <tbody id="users-tbody"><tr><td colspan="5" class="empty">Đang tải...</td></tr></tbody>
+    </table></div>
+  `;
+  document.getElementById("btn-add-user").addEventListener("click", () => openUserForm());
+  renderUsersTable();
+}
+
+async function renderUsersTable() {
+  const tbody = document.getElementById("users-tbody");
+  if (!tbody) return;
+  let users;
+  try {
+    users = await listUsers();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Không tải được danh sách: ${escapeHtml(err.message)}</td></tr>`;
+    return;
+  }
+  if (users.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="empty">Chưa có người dùng nào</td></tr>`; return; }
+  tbody.innerHTML = users.map((u) => `
+    <tr>
+      <td>${escapeHtml(u.username)}</td>
+      <td>${escapeHtml(u.full_name || "—")}</td>
+      <td><span class="badge ${u.role === "admin" ? "badge-green" : "badge-amber"}">${u.role === "admin" ? "Full quyền" : "Chỉ xem"}</span></td>
+      <td>${formatDate(u.created_at)}</td>
+      <td class="actions">
+        <button class="icon-btn" data-edit-id="${u.id}" title="Sửa">✎</button>
+        ${u.id !== state.currentUser?.id ? `<button class="icon-btn danger" data-del-id="${u.id}" title="Xóa">🗑</button>` : ""}
+      </td>
+    </tr>`).join("");
+  tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => {
+    const u = users.find((x) => x.id === b.dataset.editId);
+    openUserForm(u);
+  }));
+  tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm("Xóa người dùng này?")) return;
+    try {
+      await deleteUserAccount(b.dataset.delId);
+      renderUsersTable();
+    } catch (err) {
+      alert(`Không xóa được: ${err.message}`);
+    }
+  }));
+}
+
+function openUserForm(editing) {
+  openModal({
+    title: editing ? "Sửa người dùng" : "Thêm người dùng",
+    bodyHtml: `
+      <form id="user-form" class="form-grid">
+        <label>Tên đăng nhập
+          <input name="username" required value="${escapeHtml(editing?.username || "")}" ${editing ? "disabled" : ""} />
+        </label>
+        <label>Họ tên
+          <input name="full_name" value="${escapeHtml(editing?.full_name || "")}" />
+        </label>
+        <label>Mật khẩu ${editing ? "(để trống nếu không đổi)" : ""}
+          <input type="password" name="password" minlength="6" ${editing ? "" : "required"} placeholder="Tối thiểu 6 ký tự" />
+        </label>
+        <label>Quyền
+          <select name="role">
+            <option value="viewer" ${editing?.role !== "admin" ? "selected" : ""}>Chỉ xem</option>
+            <option value="admin" ${editing?.role === "admin" ? "selected" : ""}>Full quyền</option>
+          </select>
+        </label>
+      </form>
+      <p id="user-form-error" class="auth-error" style="display:none;margin-top:12px"></p>
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="user-save">${editing ? "Lưu thay đổi" : "Thêm người dùng"}</button>`,
+    onMount: () => {
+      document.getElementById("user-save").addEventListener("click", async () => {
+        const form = document.getElementById("user-form");
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        if (editing && !payload.password) delete payload.password;
+        const errEl = document.getElementById("user-form-error");
+        errEl.style.display = "none";
+        try {
+          if (editing) await updateUserAccount(editing.id, payload);
+          else await createUser(payload);
+          closeModal();
+          renderUsersTable();
+        } catch (err) {
+          errEl.textContent = err.message;
+          errEl.style.display = "";
+        }
+      });
+    },
+  });
+}
+
+/* ================= AUTH: login gate ================= */
+const authRoot = document.getElementById("auth-root");
+
+function renderLoginScreen() {
+  document.querySelector(".app").style.display = "none";
+  authRoot.innerHTML = `
+    <div class="auth-overlay">
+      <div class="auth-card">
+        <div class="auth-brand">
+          <span class="brand-mark">TVV</span>
+          <div>
+            <p class="auth-title">TVV Hợp Đồng Tư Vấn</p>
+            <p class="auth-sub">Đăng nhập để tiếp tục</p>
+          </div>
+        </div>
+        <form class="auth-form" id="login-form">
+          <p id="login-error" class="auth-error" style="display:none"></p>
+          <label>Tên đăng nhập
+            <input name="username" required autofocus />
+          </label>
+          <label>Mật khẩu
+            <input type="password" name="password" required />
+          </label>
+          <button type="submit" class="btn btn-primary auth-submit">Đăng nhập</button>
+        </form>
+      </div>
+    </div>
+  `;
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const errEl = document.getElementById("login-error");
+    errEl.style.display = "none";
+    const fd = new FormData(form);
+    const submitBtn = form.querySelector(".auth-submit");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Đang đăng nhập...";
+    try {
+      const user = await apiLogin(fd.get("username"), fd.get("password"));
+      state.currentUser = user;
+      await afterLogin();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = "";
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Đăng nhập";
+    }
+  });
+}
+
+async function afterLogin() {
+  enableSync((resource, action) => showSyncWarning(resource, action));
+  try {
+    const serverData = await pullAllFromServer();
+    Store.replaceAllFromServer(serverData);
+  } catch (err) {
+    console.error("Không tải được dữ liệu từ server", err);
+  }
+  authRoot.innerHTML = "";
+  document.querySelector(".app").style.display = "";
+  document.body.classList.toggle("readonly-mode", !canWrite());
+  renderUserBadge();
+  document.getElementById("nav-users").style.display = state.currentUser?.role === "admin" ? "" : "none";
+  renderCurrentView();
+}
+
+function renderUserBadge() {
+  const footer = document.getElementById("sidebar-footer");
+  if (!state.backendAvailable) { footer.textContent = "Dữ liệu lưu tại trình duyệt này"; return; }
+  const u = state.currentUser;
+  footer.innerHTML = `
+    <div class="user-badge">
+      <div>
+        <div>${escapeHtml(u.full_name || u.username)}</div>
+        <span class="role-pill">${u.role === "admin" ? "Full quyền" : "Chỉ xem"}</span>
+      </div>
+      <button id="btn-logout">Đăng xuất</button>
+    </div>
+  `;
+  document.getElementById("btn-logout").addEventListener("click", async () => {
+    await apiLogout();
+    disableSync();
+    state.currentUser = null;
+    renderLoginScreen();
+  });
+}
+
+let syncWarningTimer = null;
+function showSyncWarning(resource, action) {
+  let el = document.getElementById("sync-warning");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "sync-warning";
+    el.className = "sync-warning";
+    document.body.appendChild(el);
+  }
+  el.textContent = "⚠ Không đồng bộ được thay đổi lên server (mất mạng?). Dữ liệu vẫn được lưu tạm trên trình duyệt này — hãy thử lại khi có mạng.";
+  clearTimeout(syncWarningTimer);
+  syncWarningTimer = setTimeout(() => el.remove(), 8000);
+}
+
 /* ---------------- Init ---------------- */
-renderCurrentView();
+async function init() {
+  const session = await checkSession();
+  state.backendAvailable = session.backendAvailable;
+  if (!session.backendAvailable) {
+    renderCurrentView();
+    return;
+  }
+  if (session.user) {
+    state.currentUser = session.user;
+    await afterLogin();
+  } else {
+    renderLoginScreen();
+  }
+}
+
+init();
   </script>
 </body>
 </html>

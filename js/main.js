@@ -3,6 +3,18 @@ import { uid, formatCurrency, formatDate, todayISO, daysUntil, escapeHtml, numbe
 import { drawBarChart, drawDonutChart } from "./charts.js";
 import { LANGS, t } from "./i18n.js";
 import { ocrFile, ocrLibsAvailable, parseBusinessLicenseText } from "./ocr.js";
+import {
+  login as apiLogin,
+  logout as apiLogout,
+  checkSession,
+  pullAllFromServer,
+  enableSync,
+  disableSync,
+  listUsers,
+  createUser,
+  updateUserAccount,
+  deleteUserAccount,
+} from "./auth.js";
 
 const DEFAULT_QUOTE_PAYMENT_TERMS = [
   "-\tThanh toán 50% phí tư vấn trong vòng 5 ngày làm việc kể từ ngày ký xác nhận báo giá",
@@ -38,7 +50,22 @@ const state = {
   quoteSearch: "",
   quoteStatus: "all",
   reportYear: new Date().getFullYear(),
+  backendAvailable: false,
+  currentUser: null,
 };
+
+/* ---------------- Auth / permissions ---------------- */
+function canWrite() {
+  return !(state.backendAvailable && state.currentUser && state.currentUser.role === "viewer");
+}
+
+function guardWrite() {
+  if (!canWrite()) {
+    alert("Tài khoản chỉ xem không có quyền chỉnh sửa dữ liệu.");
+    return false;
+  }
+  return true;
+}
 
 /* ---------------- Navigation ---------------- */
 function setView(view) {
@@ -56,6 +83,7 @@ function renderCurrentView() {
     case "quotes": return renderQuotes();
     case "reports": return renderReports();
     case "settings": return renderSettings();
+    case "users": return renderUsers();
   }
 }
 
@@ -304,6 +332,7 @@ function renderContractsTable() {
   tbody.querySelectorAll("[data-print-id]").forEach((b) => b.addEventListener("click", () => pickLanguageThen((lang) => printContract(b.dataset.printId, lang))));
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openContractForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     if (confirm("Xóa hợp đồng này? Hành động không thể hoàn tác.")) { Store.deleteContract(b.dataset.delId); renderContractsTable(); }
   }));
 }
@@ -352,6 +381,7 @@ function openContractForm(id, prefill, onSaved) {
     footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="contract-save">${editing ? "Lưu thay đổi" : "Tạo hợp đồng"}</button>`,
     onMount: () => {
       document.getElementById("contract-save").addEventListener("click", () => {
+        if (!guardWrite()) return;
         const form = document.getElementById("contract-form");
         if (!form.reportValidity()) return;
         const payload = Object.fromEntries(new FormData(form).entries());
@@ -432,6 +462,7 @@ function renderPaymentsTbody(contractId) {
   }).join("");
 
   tbody.querySelectorAll("[data-mark-paid]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     const c2 = Store.getContract(contractId);
     const payments2 = c2.payments.map((p) => (p.id === b.dataset.markPaid ? { ...p, paidDate: todayISO() } : p));
     Store.updateContract(contractId, { payments: payments2 });
@@ -439,6 +470,7 @@ function renderPaymentsTbody(contractId) {
     if (state.view === "contracts") renderContractsTable();
   }));
   tbody.querySelectorAll("[data-del-payment]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     if (!confirm("Xóa đợt thanh toán này?")) return;
     const c2 = Store.getContract(contractId);
     Store.updateContract(contractId, { payments: c2.payments.filter((p) => p.id !== b.dataset.delPayment) });
@@ -467,6 +499,7 @@ function openPaymentForm(contractId) {
     footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="payment-save">Lưu</button>`,
     onMount: () => {
       document.getElementById("payment-save").addEventListener("click", () => {
+        if (!guardWrite()) return;
         const form = document.getElementById("payment-form");
         if (!form.reportValidity()) return;
         const fd = new FormData(form);
@@ -594,6 +627,7 @@ function openLicenseImportModal() {
       });
 
       saveBtn.addEventListener("click", () => {
+        if (!guardWrite()) return;
         let count = 0;
         rows.filter((r) => r.checked && r.status === "done").forEach((r) => {
           const p = r.parsed;
@@ -647,6 +681,7 @@ function renderClientsTable() {
 
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openClientForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     const used = contracts.some((k) => k.clientId === b.dataset.delId) || quotes.some((qt) => qt.clientId === b.dataset.delId);
     if (used) { alert("Không thể xóa: khách hàng đang có hợp đồng hoặc báo giá liên quan."); return; }
     if (confirm("Xóa khách hàng này?")) { Store.deleteClient(b.dataset.delId); renderClientsTable(); }
@@ -695,6 +730,7 @@ function openClientForm(id) {
     footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="client-save">${editing ? "Lưu thay đổi" : "Thêm khách hàng"}</button>`,
     onMount: () => {
       document.getElementById("client-save").addEventListener("click", () => {
+        if (!guardWrite()) return;
         const form = document.getElementById("client-form");
         if (!form.reportValidity()) return;
         const payload = Object.fromEntries(new FormData(form).entries());
@@ -772,6 +808,7 @@ function renderQuotesTable() {
   tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => openQuoteForm(b.dataset.editId)));
   tbody.querySelectorAll("[data-convert-id]").forEach((b) => b.addEventListener("click", () => convertQuoteToContract(b.dataset.convertId)));
   tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", () => {
+    if (!guardWrite()) return;
     if (confirm("Xóa báo giá này?")) { Store.deleteQuote(b.dataset.delId); renderQuotesTable(); }
   }));
 }
@@ -891,6 +928,7 @@ function openQuoteForm(id) {
       form.taxPct.addEventListener("input", updateTotals);
 
       document.getElementById("quote-save").addEventListener("click", () => {
+        if (!guardWrite()) return;
         if (!form.reportValidity()) return;
         const payload = Object.fromEntries(new FormData(form).entries());
         payload.discountPct = Number(payload.discountPct || 0);
@@ -1252,7 +1290,7 @@ function renderSettings() {
       <p class="muted">Dữ liệu được lưu ngay trên trình duyệt này (localStorage). Hãy sao lưu định kỳ để tránh mất dữ liệu.</p>
       <div class="row" style="gap:8px">
         <button class="btn" id="btn-export">⬇ Xuất dữ liệu (JSON)</button>
-        <label class="btn" style="cursor:pointer">⬆ Nhập dữ liệu
+        <label class="btn" id="btn-import-label" style="cursor:pointer">⬆ Nhập dữ liệu
           <input type="file" id="btn-import" accept="application/json" style="display:none" />
         </label>
         <button class="btn danger" id="btn-clear">🗑 Xóa toàn bộ dữ liệu</button>
@@ -1261,6 +1299,7 @@ function renderSettings() {
   `;
 
   document.getElementById("settings-save").addEventListener("click", () => {
+    if (!guardWrite()) return;
     const form = document.getElementById("settings-form");
     const payload = Object.fromEntries(new FormData(form).entries());
     payload.reminderDays = Number(payload.reminderDays) || 30;
@@ -1269,6 +1308,7 @@ function renderSettings() {
   });
 
   document.getElementById("bank-save").addEventListener("click", () => {
+    if (!guardWrite()) return;
     const form = document.getElementById("bank-form");
     const payload = Object.fromEntries(new FormData(form).entries());
     Store.saveSettings(payload);
@@ -1286,6 +1326,7 @@ function renderSettings() {
   });
 
   document.getElementById("btn-import").addEventListener("change", (e) => {
+    if (!guardWrite()) { e.target.value = ""; return; }
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -1306,6 +1347,7 @@ function renderSettings() {
   });
 
   document.getElementById("btn-clear").addEventListener("click", () => {
+    if (!guardWrite()) return;
     if (confirm("Xóa toàn bộ dữ liệu? Hành động này không thể hoàn tác.")) {
       Store.clearAll();
       renderCurrentView();
@@ -1313,5 +1355,221 @@ function renderSettings() {
   });
 }
 
+/* ================= USERS (admin only) ================= */
+function renderUsers() {
+  const el = document.getElementById("view-users");
+  el.innerHTML = `
+    <div class="page-header row">
+      <div><h2>Người dùng</h2><p class="muted">Quản lý tài khoản đăng nhập — Full quyền hoặc Chỉ xem</p></div>
+      <button class="btn btn-primary" id="btn-add-user">+ Thêm người dùng</button>
+    </div>
+    <div class="table-wrap"><table class="data-table">
+      <thead><tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Quyền</th><th>Ngày tạo</th><th></th></tr></thead>
+      <tbody id="users-tbody"><tr><td colspan="5" class="empty">Đang tải...</td></tr></tbody>
+    </table></div>
+  `;
+  document.getElementById("btn-add-user").addEventListener("click", () => openUserForm());
+  renderUsersTable();
+}
+
+async function renderUsersTable() {
+  const tbody = document.getElementById("users-tbody");
+  if (!tbody) return;
+  let users;
+  try {
+    users = await listUsers();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Không tải được danh sách: ${escapeHtml(err.message)}</td></tr>`;
+    return;
+  }
+  if (users.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="empty">Chưa có người dùng nào</td></tr>`; return; }
+  tbody.innerHTML = users.map((u) => `
+    <tr>
+      <td>${escapeHtml(u.username)}</td>
+      <td>${escapeHtml(u.full_name || "—")}</td>
+      <td><span class="badge ${u.role === "admin" ? "badge-green" : "badge-amber"}">${u.role === "admin" ? "Full quyền" : "Chỉ xem"}</span></td>
+      <td>${formatDate(u.created_at)}</td>
+      <td class="actions">
+        <button class="icon-btn" data-edit-id="${u.id}" title="Sửa">✎</button>
+        ${u.id !== state.currentUser?.id ? `<button class="icon-btn danger" data-del-id="${u.id}" title="Xóa">🗑</button>` : ""}
+      </td>
+    </tr>`).join("");
+  tbody.querySelectorAll("[data-edit-id]").forEach((b) => b.addEventListener("click", () => {
+    const u = users.find((x) => x.id === b.dataset.editId);
+    openUserForm(u);
+  }));
+  tbody.querySelectorAll("[data-del-id]").forEach((b) => b.addEventListener("click", async () => {
+    if (!confirm("Xóa người dùng này?")) return;
+    try {
+      await deleteUserAccount(b.dataset.delId);
+      renderUsersTable();
+    } catch (err) {
+      alert(`Không xóa được: ${err.message}`);
+    }
+  }));
+}
+
+function openUserForm(editing) {
+  openModal({
+    title: editing ? "Sửa người dùng" : "Thêm người dùng",
+    bodyHtml: `
+      <form id="user-form" class="form-grid">
+        <label>Tên đăng nhập
+          <input name="username" required value="${escapeHtml(editing?.username || "")}" ${editing ? "disabled" : ""} />
+        </label>
+        <label>Họ tên
+          <input name="full_name" value="${escapeHtml(editing?.full_name || "")}" />
+        </label>
+        <label>Mật khẩu ${editing ? "(để trống nếu không đổi)" : ""}
+          <input type="password" name="password" minlength="6" ${editing ? "" : "required"} placeholder="Tối thiểu 6 ký tự" />
+        </label>
+        <label>Quyền
+          <select name="role">
+            <option value="viewer" ${editing?.role !== "admin" ? "selected" : ""}>Chỉ xem</option>
+            <option value="admin" ${editing?.role === "admin" ? "selected" : ""}>Full quyền</option>
+          </select>
+        </label>
+      </form>
+      <p id="user-form-error" class="auth-error" style="display:none;margin-top:12px"></p>
+    `,
+    footerHtml: `<button class="btn" data-close>Hủy</button><button class="btn btn-primary" id="user-save">${editing ? "Lưu thay đổi" : "Thêm người dùng"}</button>`,
+    onMount: () => {
+      document.getElementById("user-save").addEventListener("click", async () => {
+        const form = document.getElementById("user-form");
+        if (!form.reportValidity()) return;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        if (editing && !payload.password) delete payload.password;
+        const errEl = document.getElementById("user-form-error");
+        errEl.style.display = "none";
+        try {
+          if (editing) await updateUserAccount(editing.id, payload);
+          else await createUser(payload);
+          closeModal();
+          renderUsersTable();
+        } catch (err) {
+          errEl.textContent = err.message;
+          errEl.style.display = "";
+        }
+      });
+    },
+  });
+}
+
+/* ================= AUTH: login gate ================= */
+const authRoot = document.getElementById("auth-root");
+
+function renderLoginScreen() {
+  document.querySelector(".app").style.display = "none";
+  authRoot.innerHTML = `
+    <div class="auth-overlay">
+      <div class="auth-card">
+        <div class="auth-brand">
+          <span class="brand-mark">TVV</span>
+          <div>
+            <p class="auth-title">TVV Hợp Đồng Tư Vấn</p>
+            <p class="auth-sub">Đăng nhập để tiếp tục</p>
+          </div>
+        </div>
+        <form class="auth-form" id="login-form">
+          <p id="login-error" class="auth-error" style="display:none"></p>
+          <label>Tên đăng nhập
+            <input name="username" required autofocus />
+          </label>
+          <label>Mật khẩu
+            <input type="password" name="password" required />
+          </label>
+          <button type="submit" class="btn btn-primary auth-submit">Đăng nhập</button>
+        </form>
+      </div>
+    </div>
+  `;
+  document.getElementById("login-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const errEl = document.getElementById("login-error");
+    errEl.style.display = "none";
+    const fd = new FormData(form);
+    const submitBtn = form.querySelector(".auth-submit");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Đang đăng nhập...";
+    try {
+      const user = await apiLogin(fd.get("username"), fd.get("password"));
+      state.currentUser = user;
+      await afterLogin();
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.style.display = "";
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Đăng nhập";
+    }
+  });
+}
+
+async function afterLogin() {
+  enableSync((resource, action) => showSyncWarning(resource, action));
+  try {
+    const serverData = await pullAllFromServer();
+    Store.replaceAllFromServer(serverData);
+  } catch (err) {
+    console.error("Không tải được dữ liệu từ server", err);
+  }
+  authRoot.innerHTML = "";
+  document.querySelector(".app").style.display = "";
+  document.body.classList.toggle("readonly-mode", !canWrite());
+  renderUserBadge();
+  document.getElementById("nav-users").style.display = state.currentUser?.role === "admin" ? "" : "none";
+  renderCurrentView();
+}
+
+function renderUserBadge() {
+  const footer = document.getElementById("sidebar-footer");
+  if (!state.backendAvailable) { footer.textContent = "Dữ liệu lưu tại trình duyệt này"; return; }
+  const u = state.currentUser;
+  footer.innerHTML = `
+    <div class="user-badge">
+      <div>
+        <div>${escapeHtml(u.full_name || u.username)}</div>
+        <span class="role-pill">${u.role === "admin" ? "Full quyền" : "Chỉ xem"}</span>
+      </div>
+      <button id="btn-logout">Đăng xuất</button>
+    </div>
+  `;
+  document.getElementById("btn-logout").addEventListener("click", async () => {
+    await apiLogout();
+    disableSync();
+    state.currentUser = null;
+    renderLoginScreen();
+  });
+}
+
+let syncWarningTimer = null;
+function showSyncWarning(resource, action) {
+  let el = document.getElementById("sync-warning");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "sync-warning";
+    el.className = "sync-warning";
+    document.body.appendChild(el);
+  }
+  el.textContent = "⚠ Không đồng bộ được thay đổi lên server (mất mạng?). Dữ liệu vẫn được lưu tạm trên trình duyệt này — hãy thử lại khi có mạng.";
+  clearTimeout(syncWarningTimer);
+  syncWarningTimer = setTimeout(() => el.remove(), 8000);
+}
+
 /* ---------------- Init ---------------- */
-renderCurrentView();
+async function init() {
+  const session = await checkSession();
+  state.backendAvailable = session.backendAvailable;
+  if (!session.backendAvailable) {
+    renderCurrentView();
+    return;
+  }
+  if (session.user) {
+    state.currentUser = session.user;
+    await afterLogin();
+  } else {
+    renderLoginScreen();
+  }
+}
+
+init();
