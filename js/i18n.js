@@ -41,8 +41,8 @@ export const I18N = {
     noteTitle: "Ghi chú",
     confirmTitle: "XÁC NHẬN",
     confirmedByLabel: "Xác nhận đồng ý báo giá",
-    preparedByLabel: "Người lập báo giá",
-    signPlaceholder: "(Ký, họ tên)",
+    preparedByLabel: "Người báo giá",
+    signPlaceholder: "(Ký tên, đóng dấu, Họ tên)",
     quoteThanks: "Cảm ơn Quý khách đã tin tưởng và sử dụng dịch vụ của chúng tôi!",
 
     contractDocTitle: "HỢP ĐỒNG DỊCH VỤ TƯ VẤN",
@@ -163,8 +163,8 @@ export const I18N = {
     noteTitle: "Note",
     confirmTitle: "CONFIRMATION",
     confirmedByLabel: "Confirmed by (Client)",
-    preparedByLabel: "Prepared by",
-    signPlaceholder: "(Signature, full name)",
+    preparedByLabel: "Issued by",
+    signPlaceholder: "(Signature, seal, full name)",
     quoteThanks: "Thank you for your trust and for using our services!",
 
     contractDocTitle: "CONSULTING SERVICE CONTRACT",
@@ -285,8 +285,8 @@ export const I18N = {
     noteTitle: "비고",
     confirmTitle: "확인",
     confirmedByLabel: "견적 승인 확인 (고객)",
-    preparedByLabel: "작성자",
-    signPlaceholder: "(서명, 성명)",
+    preparedByLabel: "견적 담당자",
+    signPlaceholder: "(서명, 직인, 성명)",
     quoteThanks: "저희 서비스를 신뢰하고 이용해 주셔서 감사합니다!",
 
     contractDocTitle: "컨설팅 서비스 계약서",
@@ -407,8 +407,8 @@ export const I18N = {
     noteTitle: "备注",
     confirmTitle: "确认",
     confirmedByLabel: "客户确认",
-    preparedByLabel: "制表人",
-    signPlaceholder: "（签名、姓名）",
+    preparedByLabel: "报价人",
+    signPlaceholder: "（签名、盖章、姓名）",
     quoteThanks: "感谢贵司的信任与支持！",
 
     contractDocTitle: "咨询服务合同",

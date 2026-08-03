@@ -4,6 +4,17 @@ import { drawBarChart, drawDonutChart } from "./charts.js";
 import { LANGS, t } from "./i18n.js";
 import { ocrFile, ocrLibsAvailable, parseBusinessLicenseText } from "./ocr.js";
 
+const DEFAULT_QUOTE_PAYMENT_TERMS = [
+  "-\tThanh toán 50% phí tư vấn trong vòng 5 ngày làm việc kể từ ngày ký xác nhận báo giá",
+  "-\tThanh toán 50% phí tư vấn còn lại trong vòng 5 ngày làm việc kể từ ngày nhận chứng chỉ",
+].join("\n");
+
+const DEFAULT_QUOTE_NOTE = [
+  "1. Chưa bao gồm phí trả cho WRAP",
+  "2. Phụ phí 30,000,000đ",
+  "3. Chi phí giấy tờ pháp lý, đầu tư hiện trường tính vào nhà máy",
+].join("\n");
+
 const STATUS_CONTRACT = {
   draft: { label: "Nháp", color: "#64748b" },
   active: { label: "Đang thực hiện", color: "#2563eb" },
@@ -767,7 +778,12 @@ function renderQuotesTable() {
 
 function openQuoteForm(id) {
   const editing = id ? Store.getQuote(id) : null;
-  const data = editing || { items: [{ description: "", unit: "gói", quantity: 1, unitPrice: 0 }], taxPct: 10 };
+  const data = editing || {
+    items: [{ description: "", unit: "gói", quantity: 1, unitPrice: 0 }],
+    taxPct: 10,
+    paymentTerms: DEFAULT_QUOTE_PAYMENT_TERMS,
+    note: DEFAULT_QUOTE_NOTE,
+  };
 
   openModal({
     title: editing ? "Sửa báo giá" : "Tạo báo giá",
@@ -807,10 +823,10 @@ function openQuoteForm(id) {
         </label>
         <div class="col-span-2" id="quote-total-line"></div>
         <label class="col-span-2">Điều khoản thanh toán (tùy chọn)
-          <textarea name="paymentTerms" rows="2" placeholder="VD: Thanh toán 50% khi ký hợp đồng, 50% còn lại khi nghiệm thu.">${escapeHtml(data.paymentTerms || "")}</textarea>
+          <textarea name="paymentTerms" rows="4" placeholder="VD: Thanh toán 50% khi ký hợp đồng, 50% còn lại khi nghiệm thu.">${escapeHtml(data.paymentTerms || "")}</textarea>
         </label>
         <label class="col-span-2">Ghi chú
-          <textarea name="note" rows="2">${escapeHtml(data.note || "")}</textarea>
+          <textarea name="note" rows="4">${escapeHtml(data.note || "")}</textarea>
         </label>
       </form>
       ${Store.getClients().length === 0 ? '<p class="hint">Bạn chưa có khách hàng nào. Hãy vào mục Khách hàng để thêm trước.</p>' : ""}
@@ -1010,9 +1026,9 @@ function printQuote(id, lang = "vi") {
     ${q.validUntil ? `<p class="muted">${escapeHtml(tf("validUntilNote", formatDate(q.validUntil)))}</p>` : ""}
 
     <h2>${T("paymentTitle")}</h2>
-    <p>${escapeHtml(q.paymentTerms || T("paymentDefault"))}</p>
+    <p>${escapeHtml(q.paymentTerms || T("paymentDefault")).replace(/\n/g, "<br/>")}</p>
 
-    ${q.note ? `<h2>${T("noteTitle")}</h2><p>${escapeHtml(q.note)}</p>` : ""}
+    ${q.note ? `<h2>${T("noteTitle")}</h2><p>${escapeHtml(q.note).replace(/\n/g, "<br/>")}</p>` : ""}
 
     <h2>${T("confirmTitle")}</h2>
     <div class="sign-grid">
@@ -1026,6 +1042,7 @@ function printQuote(id, lang = "vi") {
         <div class="sign-title">${T("preparedByLabel")}</div>
         <div class="muted">${formatDate(q.date)}</div>
         <div class="sign-space"></div>
+        <div class="muted">${T("signPlaceholder")}</div>
         <div>${escapeHtml(settings.repName || "")}</div>
       </div>
     </div>
